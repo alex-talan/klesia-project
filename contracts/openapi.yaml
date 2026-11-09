@@ -1,424 +1,621 @@
-
 openapi: 3.1.0
 
 info:
   title: KLESIA API
-  version: 0.1.0
+  version: 0.2.0
+  summary: Canonical HTTP contract between klesia-webapp and klesia-api.
   description: |
-    Canonical REST API contract for the KLESIA platform.
+    **Single source of truth** for the HTTP boundary between the Vue SPA
+    (`klesia-webapp`, Azure Static Web Apps) and the .NET back-office API
+    (`klesia-api`, Azure App Service + Azure SQL Database).
 
-    Backend: klesia-api
-    Frontend: klesia-webapp
+    Derived from `klesia_api/docs/specs/SPECIFICATIONS.md` (v1.2) and
+    `klesia_webapp/docs/specs/SPECIFICATIONS.md` (v1.1). Any change to a route,
+    schema, status code, header or CORS rule MUST be made here first and in both
+    specifications in the same change.
 
-    This specification is the single source of truth
-    for communication between both applications.
+    ## Endpoints (the complete HTTP surface)
 
-    Any breaking or non-breaking API change must
-    be reflected in this file.
+    | Operation | Route | Status |
+    |---|---|---|
+    | `getHealth` | `GET /health` | implemented in Sprint 1 |
+    | `listDemands` | `GET /api/v1/demands` | implemented in Sprint 1 |
+    | `createDemand` | `POST /api/v1/demands` | adopted, implemented after Sprint 1 |
+    | `negotiateNotifications` | `POST /api/v1/notifications/negotiate` | adopted, implemented after Sprint 1 |
 
+    The `x-implementation-status` extension on each operation carries this status
+    (`sprint-1` or `adopted`). Contract tests MUST skip `adopted` operations on
+    the server side until they are implemented. The frontend is built against all of them.
+
+    ## Conventions
+
+    * **Authentication.** Every operation except `getHealth` requires a Microsoft Entra
+      **access token** for this API (never an ID token, never a Graph token) in
+      `Authorization: Bearer`. The token must carry the delegated scope `access_as_user`.
+      The user identity is always derived from the token (`oid` claim); no user id is
+      ever accepted in a path, query, header or body.
+    * **Authorization order.** token (401) -> delegated scope (403) -> user present and
+      active in the database allowlist (403, identical to the scope failure) -> business logic.
+      Authorization is *own data only*.
+    * **JSON naming.** Business payloads (response bodies, multipart part names) are
+      `snake_case`. The only camelCase payload is the SignalR negotiation response
+      (`url`, `accessToken`): its names are fixed by the SignalR protocol and MUST NOT be renamed.
+    * **Errors.** Every non-2xx response of an application route is
+      `application/problem+json` (RFC 9457, ASP.NET Core `ProblemDetails`). The HTTP status is
+      the primary signal. Clients never render server `title`/`detail` (the UI is French only).
+      Bodies never contain stack traces, SQL, tokens, connection strings or document URLs.
+    * **Correlation.** Every response carries `X-Correlation-Id`; `ProblemDetails.traceId` equals it.
+    * **SIREN.** A string, never a number. Requests send exactly 9 digits (`732829320`);
+      responses return the display format `XXX-XXX-XXX` (`732-829-320`). It is not unique:
+      several demands may share a SIREN.
+    * **Documents.** `bae_link` is the **permanent** HTTPS URL of the PDF in SharePoint.
+      It is opened by the browser with the user's own Entra single sign-on session; SharePoint
+      permissions are the access gate. It is never signed, time-limited or anonymous, and no
+      bearer token is attached when opening it. The frontend never builds or alters it.
+    * **Ordering / pagination.** `listDemands` returns all of the user's demands, most recent
+      first (`demand_id` descending). The order is a display default, not a business contract,
+      and there is no pagination.
+
+    ## CORS (see `x-cors`)
+
+    Exact origins from configuration only (deployed Static Web Apps origin and
+    `http://localhost:5173`), never `*`. For every route, including negotiate, the policy allows
+    methods `GET`, `POST`, `OPTIONS`; request headers `Authorization`, `Content-Type`,
+    `X-Requested-With`, `X-SignalR-User-Agent` (the last two are sent by the SignalR JavaScript
+    client; without them the negotiate preflight fails); exposes `X-Correlation-Id`; caches
+    preflight for 600 s; **no credentials** (`Access-Control-Allow-Credentials` is not sent and
+    the SignalR connection is created with `withCredentials: false`).
+
+    ## Real-time notifications (SignalR, not HTTP)
+
+    After negotiation the client connects to Azure SignalR Service (Serverless mode), hub
+    `demands`. The only server-to-client method is `demandUpdated` (case-sensitive), with **no
+    arguments**; any payload is ignored by the frontend. It is sent only to the owning user
+    (targeted by the Entra `oid`), when a demand's status changes or a created demand becomes
+    visible. Delivery is at-most-once with no replay: the client reloads `listDemands` after every
+    (re)connection and every notification.
   contact:
     name: KLESIA Development Team
 
 servers:
-  - url: http://localhost:8080/api/v1
-    description: Local development
-
-  - url: https://api-staging.example.com/api/v1
-    description: Staging environment
-
-  - url: https://api.example.com/api/v1
-    description: Production environment
+  - url: http://localhost:5180
+    description: Local development (klesia-api, HTTP profile)
+  - url: https://localhost:7180
+    description: Local development (klesia-api, HTTPS profile)
+  - url: https://api-staging.example.com
+    description: Staging (placeholder host, to be replaced by the operator)
+  - url: https://api.example.com
+    description: Production (placeholder host, to be replaced by the operator)
 
 tags:
   - name: Health
-    description: API health monitoring
+    description: Anonymous probe used by Azure App Service.
+  - name: Demands
+    description: Membership demands (demandes d'adhésion) of the signed-in user.
+  - name: Notifications
+    description: Negotiation of the real-time (Azure SignalR) connection.
 
-  - name: Resources
-    description: Example business resource management
-
-# Authentication required by default.
-# Individual operations may override this.
 security:
-  - bearerAuth: []
+  - entraOAuth2:
+      - access_as_user
+
+x-cors:
+  allowedOrigins: from configuration `Cors:AllowedOrigins` (exact origins, never `*`)
+  allowedMethods: [GET, POST, OPTIONS]
+  allowedRequestHeaders:
+    - Authorization
+    - Content-Type
+    - X-Requested-With
+    - X-SignalR-User-Agent
+  exposedResponseHeaders:
+    - X-Correlation-Id
+  preflightMaxAgeSeconds: 600
+  allowCredentials: false
 
 paths:
-
-  # ==========================================
-  # HEALTH
-  # ==========================================
-
   /health:
     get:
-      tags:
-        - Health
+      tags: [Health]
       operationId: getHealth
       summary: Check API health
+      description: |
+        Anonymous liveness/readiness probe (process and SQL dependency). Not under `/api/v1`.
+        Returns no user data and no dependency details. Not called by the browser, so no CORS rule applies.
       security: []
-
+      x-implementation-status: sprint-1
       responses:
         "200":
-          description: API is operational
+          description: The API and its SQL dependency respond.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
-
-  # ==========================================
-  # RESOURCES - COLLECTION
-  # ==========================================
-
-  /resources:
-    get:
-      tags:
-        - Resources
-      operationId: listResources
-      summary: List resources
-      description: Retrieve a paginated collection.
-
-      parameters:
-        - $ref: "#/components/parameters/Limit"
-        - $ref: "#/components/parameters/Offset"
-
-      responses:
-        "200":
-          description: Resource collection
+              example:
+                status: ok
+        "503":
+          description: The API or its SQL dependency is unavailable.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ResourceList"
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: unavailable
 
-        "400":
-          $ref: "#/components/responses/BadRequest"
+  /api/v1/demands:
+    get:
+      tags: [Demands]
+      operationId: listDemands
+      summary: List the signed-in user's demands
+      description: |
+        Returns the identity of the signed-in user and **only their own** demands
+        (`Demand.UserId` = the matched `sec.User`), most recent first. An empty list is a valid `200`.
+        Takes no parameter: any `user_id` sent in the query or a header is ignored.
 
+        The frontend calls it once after authentication and then only on: successful reconnection,
+        `demandUpdated` notification, successful `createDemand`, and its "Réessayer" button,
+        never concurrently.
+      x-implementation-status: sprint-1
+      responses:
+        "200":
+          description: The user's identity and demands.
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDemands"
+              examples:
+                withDemands:
+                  summary: Three demands, one per status
+                  value:
+                    user_id: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                    user_name: John DOE
+                    demands:
+                      - demand_id: 3
+                        siren_number: 223-743-965
+                        bae_link: https://contoso.sharepoint.com/sites/klesia/bae/3.pdf
+                        status: fail
+                      - demand_id: 2
+                        siren_number: 185-255-002
+                        bae_link: https://contoso.sharepoint.com/sites/klesia/bae/2.pdf
+                        status: ok
+                      - demand_id: 1
+                        siren_number: 732-829-320
+                        bae_link: https://contoso.sharepoint.com/sites/klesia/bae/1.pdf
+                        status: pending
+                empty:
+                  summary: Active user without any demand
+                  value:
+                    user_id: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                    user_name: John DOE
+                    demands: []
         "401":
           $ref: "#/components/responses/Unauthorized"
-
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
     post:
-      tags:
-        - Resources
-      operationId: createResource
-      summary: Create a resource
+      tags: [Demands]
+      operationId: createDemand
+      summary: Create a demand with its BAE PDF
+      description: |
+        Creates one demand owned by the signed-in user, with status `pending`, and stores the PDF
+        (Bulletin d'Adhésion Entreprise) in SharePoint.
 
+        Rules:
+
+        1. Same authentication and authorization order as `listDemands`; failures store nothing.
+        2. `siren_number`: exactly nine ASCII digits (`^[0-9]{9}$`), leading zeros kept, no separators
+           (the frontend strips spaces and hyphens), no checksum rule.
+        3. `bae_file`: exactly one part, at most `Upload:MaxPdfSizeMb` MB (provisionally 10;
+           1 MB = 1,048,576 bytes; identical to the frontend `maxPdfSizeMb`). The backend validates the
+           real content (starts with `%PDF-`, declared type `application/pdf`); the file extension and
+           the browser MIME type are never trusted alone.
+        4. No other part is accepted. In particular there is **no `user_id` part**: the owner always
+           comes from the token.
+        5. The demand is committed before `201` is sent, so the next `listDemands` contains it
+           (read-after-write). The backend then sends `demandUpdated` to the owner.
+        6. Not idempotent. The same SIREN or document may be submitted again and creates another
+           demand. The frontend never retries automatically and never replays it after a 401 recovery.
+        7. The frontend treats **any 2xx** as success and neither parses nor needs the body. No
+           `Location` header is sent because no single-demand route exists.
+      x-implementation-status: adopted
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: "#/components/schemas/CreateResourceRequest"
-
+              $ref: "#/components/schemas/CreateDemandForm"
+            encoding:
+              siren_number:
+                contentType: text/plain
+              bae_file:
+                contentType: application/pdf
       responses:
         "201":
-          description: Resource created
+          description: Demand created with status `pending`.
           headers:
-            Location:
-              description: URL of the created resource
-              schema:
-                type: string
+            X-Correlation-Id:
+              $ref: "#/components/headers/CorrelationId"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Resource"
-
+                $ref: "#/components/schemas/Demand"
+              example:
+                demand_id: 4
+                siren_number: 732-829-320
+                bae_link: https://contoso.sharepoint.com/sites/klesia/bae/4.pdf
+                status: pending
         "400":
           $ref: "#/components/responses/BadRequest"
-
         "401":
           $ref: "#/components/responses/Unauthorized"
-
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "422":
+          $ref: "#/components/responses/UnprocessableContent"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
-  # ==========================================
-  # RESOURCES - SINGLE ITEM
-  # ==========================================
+  /api/v1/notifications/negotiate:
+    post:
+      tags: [Notifications]
+      operationId: negotiateNotifications
+      summary: Negotiate the Azure SignalR connection
+      description: |
+        SignalR negotiation for the `demands` hub (Azure SignalR Service, Serverless mode). The
+        frontend sets `VITE_SIGNALR_HUB_URL` to `<api>/api/v1/notifications`; the official SignalR
+        JavaScript client appends `/negotiate` itself and negotiation is never skipped.
 
-  /resources/{resourceId}:
-    parameters:
-      - $ref: "#/components/parameters/ResourceId"
-
-    get:
-      tags:
-        - Resources
-      operationId: getResource
-      summary: Get a resource by ID
-
+        * Protected exactly like the REST routes: same token validation, delegated scope and active-user
+          allowlist (a recognized but inactive user cannot negotiate).
+        * The SignalR `userId` is set to the validated Entra `oid`, never to the SQL id, an e-mail or a
+          client-supplied value.
+        * No request body. The client adds the query parameter `negotiateVersion=1` and the headers
+          `X-Requested-With` and `X-SignalR-User-Agent`, which the CORS policy MUST allow.
+        * The response is the SignalR *redirect negotiation* payload. Its camelCase names are fixed by
+          the SignalR protocol (exception to the snake_case convention). The Azure access key is never
+          returned; the backend reaches Azure SignalR with its managed identity.
+        * `accessToken` is a short-lived connection token issued for the Azure SignalR Service; it is the
+          only token that may appear in a URL (WebSocket limitation). The Entra token only travels in
+          the `Authorization` header of this request.
+      x-implementation-status: adopted
+      x-signalr:
+        hub: demands
+        mode: serverless
+        clientMethods:
+          - name: demandUpdated
+            arguments: []
+            recipient: owning user only (targeted by Entra oid)
+            delivery: at-most-once, best effort, no replay
+      parameters:
+        - name: negotiateVersion
+          in: query
+          required: false
+          description: Added by the SignalR client.
+          schema:
+            type: integer
+            enum: [0, 1]
+            default: 1
       responses:
         "200":
-          description: Resource found
+          description: Redirect negotiation result for Azure SignalR Service.
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/CorrelationId"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Resource"
-
+                $ref: "#/components/schemas/NegotiateResponse"
+              example:
+                url: https://klesia-dev.service.signalr.net/client/?hub=demands
+                accessToken: short-lived-connection-token
         "401":
           $ref: "#/components/responses/Unauthorized"
-
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-    patch:
-      tags:
-        - Resources
-      operationId: updateResource
-      summary: Partially update a resource
-
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateResourceRequest"
-
-      responses:
-        "200":
-          description: Resource updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Resource"
-
-        "400":
-          $ref: "#/components/responses/BadRequest"
-
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-    delete:
-      tags:
-        - Resources
-      operationId: deleteResource
-      summary: Delete a resource
-
-      responses:
-        "204":
-          description: Resource deleted successfully
-
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-# ==========================================
-# REUSABLE COMPONENTS
-# ==========================================
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
 components:
-
-  # ------------------------------------------
-  # SECURITY
-  # ------------------------------------------
-
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+    entraOAuth2:
+      type: oauth2
       description: |
-        Bearer token authentication.
-        Replace with the actual authentication
-        mechanism used by KLESIA.
+        Microsoft Entra ID, authorization code flow with PKCE (the SPA signs in with MSAL). The API
+        accepts **v2.0 access tokens issued for itself** (audience = the API client id or
+        `api://<API client id>`), for the configured single tenant (issuer and `tid`), carrying the
+        delegated scope `access_as_user` in `scp`. Application-only tokens (no `scp`) and ID tokens
+        are rejected.
 
-  # ------------------------------------------
-  # PARAMETERS
-  # ------------------------------------------
+        `TENANT_ID` below is a placeholder for the configured tenant. The scope requested by the SPA is
+        the full form `api://<API client id>/access_as_user` (`VITE_API_SCOPE`).
+      flows:
+        authorizationCode:
+          authorizationUrl: https://login.microsoftonline.com/TENANT_ID/oauth2/v2.0/authorize
+          tokenUrl: https://login.microsoftonline.com/TENANT_ID/oauth2/v2.0/token
+          scopes:
+            access_as_user: Access the KLESIA API on behalf of the signed-in user
 
-  parameters:
-
-    ResourceId:
-      name: resourceId
-      in: path
-      required: true
-      description: Unique resource identifier
+  headers:
+    CorrelationId:
+      description: |
+        Request correlation identifier (generated by the API; also `ProblemDetails.traceId`).
+        Exposed to browsers through CORS.
       schema:
         type: string
-        format: uuid
-
-    Limit:
-      name: limit
-      in: query
-      required: false
-      description: Maximum number of returned items
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 20
-
-    Offset:
-      name: offset
-      in: query
-      required: false
-      description: Number of items to skip
-      schema:
-        type: integer
-        minimum: 0
-        default: 0
-
-  # ------------------------------------------
-  # SCHEMAS
-  # ------------------------------------------
 
   schemas:
-
     HealthResponse:
       type: object
-      required:
-        - status
+      additionalProperties: false
+      required: [status]
       properties:
         status:
           type: string
-          enum:
-            - ok
-          example: ok
+          enum: [ok, unavailable]
 
-    Resource:
+    DemandStatus:
+      type: string
+      description: |
+        Processing status (`ref.Status.Code`). `pending` = "En cours", `ok` = "Traité",
+        `fail` = "En anomalie" in the French UI. The set is closed on the API side; adding a value is
+        a contract change. The frontend nevertheless renders an unknown value as "Statut inconnu".
+      enum: [pending, ok, fail]
+
+    Demand:
       type: object
       additionalProperties: false
-      required:
-        - id
-        - name
-        - createdAt
-        - updatedAt
-
+      required: [demand_id, siren_number, bae_link, status]
       properties:
-        id:
+        demand_id:
+          type: integer
+          format: int32
+          minimum: 1
+          description: '`dbo.Demand.DemandId`; the stable rendering key.'
+        siren_number:
+          type: string
+          pattern: '^[0-9]{3}-[0-9]{3}-[0-9]{3}$'
+          description: SIREN in display format `XXX-XXX-XXX` (formatted by the backend). Text, never a number.
+          examples: [732-829-320]
+        bae_link:
+          type: string
+          format: uri
+          pattern: '^https://'
+          maxLength: 2048
+          description: |
+            Permanent absolute HTTPS URL of the PDF in SharePoint (validated by the backend).
+            Opened by the browser with the user's own SSO session; not signed, not time-limited.
+        status:
+          $ref: "#/components/schemas/DemandStatus"
+
+    UserDemands:
+      type: object
+      additionalProperties: false
+      required: [user_id, user_name, demands]
+      properties:
+        user_id:
           type: string
           format: uuid
-
-        name:
+          description: |
+            The user's Entra `oid` (`sec.User.UserUniqueId`), **not** the SQL `UserId`. Informational
+            only: the frontend never uses it as proof of identity.
+        user_name:
           type: string
-          example: Example resource
-
-        description:
-          type:
-            - string
-            - "null"
-
-        createdAt:
-          type: string
-          format: date-time
-
-        updatedAt:
-          type: string
-          format: date-time
-
-    CreateResourceRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - name
-
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 255
-
-        description:
-          type: string
-
-    UpdateResourceRequest:
-      type: object
-      additionalProperties: false
-      minProperties: 1
-
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 255
-
-        description:
-          type:
-            - string
-            - "null"
-
-    ResourceList:
-      type: object
-      additionalProperties: false
-      required:
-        - items
-        - total
-        - limit
-        - offset
-
-      properties:
-        items:
+          description: Full name from the database (`sec.User.Name`).
+        demands:
           type: array
+          description: The user's own demands, `demand_id` descending. May be empty.
           items:
-            $ref: "#/components/schemas/Resource"
+            $ref: "#/components/schemas/Demand"
 
-        total:
-          type: integer
-          minimum: 0
-
-        limit:
-          type: integer
-
-        offset:
-          type: integer
-
-    ApiError:
+    CreateDemandForm:
       type: object
       additionalProperties: false
-      required:
-        - code
-        - message
-
+      required: [siren_number, bae_file]
       properties:
-        code:
+        siren_number:
           type: string
-          example: RESOURCE_NOT_FOUND
-
-        message:
+          pattern: '^[0-9]{9}$'
+          description: Exactly nine digits, no spaces or hyphens, leading zeros kept.
+          examples: ["732829320"]
+        bae_file:
           type: string
-          example: The requested resource was not found
+          format: binary
+          contentMediaType: application/pdf
+          description: |
+            The original PDF (not base64). Limit: `Upload:MaxPdfSizeMb` (provisionally 10 MB,
+            1 MB = 1,048,576 bytes).
 
-        details:
-          type: object
-          additionalProperties: true
+    NegotiateResponse:
+      type: object
+      additionalProperties: false
+      required: [url, accessToken]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Azure SignalR Service client endpoint.
+        accessToken:
+          type: string
+          description: Short-lived Azure SignalR connection token (not an Entra token).
 
+    ProblemDetails:
+      type: object
+      description: |
+        RFC 9457 problem details. Safe, generic content only. The 403 body is identical whether the
+        cause is a missing scope, an unknown user or a disabled user.
+      additionalProperties: false
+      required: [title, status]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          default: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+          description: Safe, generic text. Never rendered by the frontend.
+        instance:
+          type: string
         traceId:
           type: string
-          description: Request correlation identifier
-
-  # ------------------------------------------
-  # STANDARD ERROR RESPONSES
-  # ------------------------------------------
+          description: Equals the `X-Correlation-Id` response header.
+        errors:
+          type: object
+          description: |
+            Only on 400/422. Keyed by request part name (`siren_number`, `bae_file`); values are
+            arrays of safe messages. The frontend only uses the keys.
+          additionalProperties:
+            type: array
+            items:
+              type: string
 
   responses:
-
     BadRequest:
-      description: Invalid request
+      description: |
+        Malformed or invalid request: missing, duplicated or unknown multipart part, or `siren_number`
+        not exactly nine digits.
+      headers:
+        X-Correlation-Id:
+          $ref: "#/components/headers/CorrelationId"
       content:
-        application/json:
+        application/problem+json:
           schema:
-            $ref: "#/components/schemas/ApiError"
+            $ref: "#/components/schemas/ProblemDetails"
+          example:
+            title: One or more validation errors occurred.
+            status: 400
+            traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00
+            errors:
+              siren_number:
+                - Must be exactly nine digits.
 
     Unauthorized:
-      description: Authentication required or invalid
-      content:
-        application/json:
+      description: |
+        Missing or malformed bearer token; invalid signature, issuer, tenant, audience or lifetime;
+        ID token; or `oid` claim missing / not a GUID.
+      headers:
+        WWW-Authenticate:
+          description: Bearer challenge.
           schema:
-            $ref: "#/components/schemas/ApiError"
+            type: string
+            examples: [Bearer]
+        X-Correlation-Id:
+          $ref: "#/components/headers/CorrelationId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+          example:
+            title: Unauthorized
+            status: 401
+            traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00
 
-    NotFound:
-      description: Resource not found
+    Forbidden:
+      description: |
+        Valid token but access denied: missing delegated scope `access_as_user` (including
+        application-only tokens), user not in the allowlist, or user inactive. All causes return the
+        same status and an identical body, so the cause is never disclosed.
+      headers:
+        X-Correlation-Id:
+          $ref: "#/components/headers/CorrelationId"
       content:
-        application/json:
+        application/problem+json:
           schema:
-            $ref: "#/components/schemas/ApiError"
+            $ref: "#/components/schemas/ProblemDetails"
+          example:
+            title: Forbidden
+            status: 403
+            traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00
+
+    PayloadTooLarge:
+      description: The PDF exceeds `Upload:MaxPdfSizeMb`. Nothing is stored.
+      headers:
+        X-Correlation-Id:
+          $ref: "#/components/headers/CorrelationId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+          example:
+            title: Payload Too Large
+            status: 413
+            traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00
+
+    UnsupportedMediaType:
+      description: The request is not `multipart/form-data`.
+      headers:
+        X-Correlation-Id:
+          $ref: "#/components/headers/CorrelationId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+          example:
+            title: Unsupported Media Type
+            status: 415
+            traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00
+
+    UnprocessableContent:
+      description: The request is well formed but `bae_file` is not a valid PDF. Nothing is stored.
+      headers:
+        X-Correlation-Id:
+          $ref: "#/components/headers/CorrelationId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+          example:
+            title: Unprocessable Content
+            status: 422
+            traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00
+            errors:
+              bae_file:
+                - The file is not a valid PDF.
 
     InternalError:
-      description: Unexpected server error
+      description: Unexpected server fault (including a stored `bae_link` that is not an HTTPS URL). Sanitized body.
+      headers:
+        X-Correlation-Id:
+          $ref: "#/components/headers/CorrelationId"
       content:
-        application/json:
+        application/problem+json:
           schema:
-            $ref: "#/components/schemas/ApiError"
+            $ref: "#/components/schemas/ProblemDetails"
+          example:
+            title: An unexpected error occurred.
+            status: 500
+            traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00
+
+    ServiceUnavailable:
+      description: A dependency (SQL Database, SharePoint, Azure SignalR) is unavailable. Never reported as 403.
+      headers:
+        X-Correlation-Id:
+          $ref: "#/components/headers/CorrelationId"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+          example:
+            title: Service Unavailable
+            status: 503
+            traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00
