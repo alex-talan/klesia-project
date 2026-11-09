@@ -1,0 +1,424 @@
+
+openapi: 3.1.0
+
+info:
+  title: KLESIA API
+  version: 0.1.0
+  description: |
+    Canonical REST API contract for the KLESIA platform.
+
+    Backend: klesia-api
+    Frontend: klesia-webapp
+
+    This specification is the single source of truth
+    for communication between both applications.
+
+    Any breaking or non-breaking API change must
+    be reflected in this file.
+
+  contact:
+    name: KLESIA Development Team
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development
+
+  - url: https://api-staging.example.com/api/v1
+    description: Staging environment
+
+  - url: https://api.example.com/api/v1
+    description: Production environment
+
+tags:
+  - name: Health
+    description: API health monitoring
+
+  - name: Resources
+    description: Example business resource management
+
+# Authentication required by default.
+# Individual operations may override this.
+security:
+  - bearerAuth: []
+
+paths:
+
+  # ==========================================
+  # HEALTH
+  # ==========================================
+
+  /health:
+    get:
+      tags:
+        - Health
+      operationId: getHealth
+      summary: Check API health
+      security: []
+
+      responses:
+        "200":
+          description: API is operational
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  # ==========================================
+  # RESOURCES - COLLECTION
+  # ==========================================
+
+  /resources:
+    get:
+      tags:
+        - Resources
+      operationId: listResources
+      summary: List resources
+      description: Retrieve a paginated collection.
+
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+
+      responses:
+        "200":
+          description: Resource collection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceList"
+
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags:
+        - Resources
+      operationId: createResource
+      summary: Create a resource
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResourceRequest"
+
+      responses:
+        "201":
+          description: Resource created
+          headers:
+            Location:
+              description: URL of the created resource
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ==========================================
+  # RESOURCES - SINGLE ITEM
+  # ==========================================
+
+  /resources/{resourceId}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+
+    get:
+      tags:
+        - Resources
+      operationId: getResource
+      summary: Get a resource by ID
+
+      responses:
+        "200":
+          description: Resource found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags:
+        - Resources
+      operationId: updateResource
+      summary: Partially update a resource
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateResourceRequest"
+
+      responses:
+        "200":
+          description: Resource updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags:
+        - Resources
+      operationId: deleteResource
+      summary: Delete a resource
+
+      responses:
+        "204":
+          description: Resource deleted successfully
+
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+# ==========================================
+# REUSABLE COMPONENTS
+# ==========================================
+
+components:
+
+  # ------------------------------------------
+  # SECURITY
+  # ------------------------------------------
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Bearer token authentication.
+        Replace with the actual authentication
+        mechanism used by KLESIA.
+
+  # ------------------------------------------
+  # PARAMETERS
+  # ------------------------------------------
+
+  parameters:
+
+    ResourceId:
+      name: resourceId
+      in: path
+      required: true
+      description: Unique resource identifier
+      schema:
+        type: string
+        format: uuid
+
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Maximum number of returned items
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    Offset:
+      name: offset
+      in: query
+      required: false
+      description: Number of items to skip
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+  # ------------------------------------------
+  # SCHEMAS
+  # ------------------------------------------
+
+  schemas:
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+          example: ok
+
+    Resource:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - createdAt
+        - updatedAt
+
+      properties:
+        id:
+          type: string
+          format: uuid
+
+        name:
+          type: string
+          example: Example resource
+
+        description:
+          type:
+            - string
+            - "null"
+
+        createdAt:
+          type: string
+          format: date-time
+
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateResourceRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+
+        description:
+          type: string
+
+    UpdateResourceRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+
+        description:
+          type:
+            - string
+            - "null"
+
+    ResourceList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - limit
+        - offset
+
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Resource"
+
+        total:
+          type: integer
+          minimum: 0
+
+        limit:
+          type: integer
+
+        offset:
+          type: integer
+
+    ApiError:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+
+      properties:
+        code:
+          type: string
+          example: RESOURCE_NOT_FOUND
+
+        message:
+          type: string
+          example: The requested resource was not found
+
+        details:
+          type: object
+          additionalProperties: true
+
+        traceId:
+          type: string
+          description: Request correlation identifier
+
+  # ------------------------------------------
+  # STANDARD ERROR RESPONSES
+  # ------------------------------------------
+
+  responses:
+
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    Unauthorized:
+      description: Authentication required or invalid
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
