@@ -38,8 +38,9 @@ info:
       active in the database allowlist (403, identical to the scope failure) -> business logic.
       Authorization is *own data only*.
     * **JSON naming.** Business payloads (response bodies, multipart part names) are
-      `snake_case`. The only camelCase payload is the SignalR negotiation response
-      (`url`, `accessToken`): its names are fixed by the SignalR protocol and MUST NOT be renamed.
+      `snake_case`. The only exceptions are the SignalR negotiation response (`url`, `accessToken`),
+      whose names are fixed by the SignalR protocol, and `ProblemDetails` (RFC 9457 / ASP.NET Core
+      standard names such as `traceId`). Neither may be renamed.
     * **Errors.** Every non-2xx response of an application route is
       `application/problem+json` (RFC 9457, ASP.NET Core `ProblemDetails`). The HTTP status is
       the primary signal. Clients never render server `title`/`detail` (the UI is French only).
