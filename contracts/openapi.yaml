@@ -2,15 +2,15 @@ openapi: 3.1.0
 
 info:
   title: KLESIA API
-  version: 0.2.0
+  version: 0.3.0
   summary: Canonical HTTP contract between klesia-webapp and klesia-api.
   description: |
     **Single source of truth** for the HTTP boundary between the Vue SPA
     (`klesia-webapp`, Azure Static Web Apps) and the .NET back-office API
     (`klesia-api`, Azure App Service + Azure SQL Database).
 
-    Derived from `klesia_api/docs/specs/SPECIFICATIONS.md` (v1.2) and
-    `klesia_webapp/docs/specs/SPECIFICATIONS.md` (v1.1). Any change to a route,
+    Derived from `klesia_api/docs/specs/SPECIFICATIONS.md` (v1.3) and
+    `klesia_webapp/docs/specs/SPECIFICATIONS.md` (v1.2). Any change to a route,
     schema, status code, header or CORS rule MUST be made here first and in both
     specifications in the same change.
 
@@ -45,10 +45,13 @@ info:
       the primary signal. Clients never render server `title`/`detail` (the UI is French only).
       Bodies never contain stack traces, SQL, tokens, connection strings or document URLs.
     * **Correlation.** Every response carries `X-Correlation-Id`; `ProblemDetails.traceId` equals it.
-    * **SIREN.** A string, never a number. Requests send exactly 9 digits (`732829320`);
-      responses return the display format `XXX-XXX-XXX` (`732-829-320`). It is not unique:
-      several demands may share a SIREN.
-    * **Documents.** `bae_link` is the **permanent** HTTPS URL of the PDF in SharePoint.
+    * **GK number.** `gk_number` is a string (Geode Klesia number), never reformatted: `GK` + six
+      digits (a `YYMMDD` date) + `-` + nine digits, e.g. `GK260902-144743112` (18 characters,
+      `^GK[0-9]{6}-[0-9]{9}$`). No calendar-date or checksum validation. Requests send it as is
+      (the frontend trims and upper-cases first); responses return it exactly as stored. It is not
+      unique: several demands may share a GK number.
+    * **Documents.** `createDemand` makes the backend copy the uploaded PDF into SharePoint and store
+      the link in the database. `bae_link` is that **permanent** HTTPS URL of the PDF in SharePoint.
       It is opened by the browser with the user's own Entra single sign-on session; SharePoint
       permissions are the access gate. It is never signed, time-limited or anonymous, and no
       bearer token is attached when opening it. The frontend never builds or alters it.
@@ -173,15 +176,15 @@ paths:
                     user_name: John DOE
                     demands:
                       - demand_id: 3
-                        siren_number: 223-743-965
+                        gk_number: GK261023-223743965
                         bae_link: https://contoso.sharepoint.com/sites/klesia/bae/3.pdf
                         status: fail
                       - demand_id: 2
-                        siren_number: 185-255-002
+                        gk_number: GK261017-185255002
                         bae_link: https://contoso.sharepoint.com/sites/klesia/bae/2.pdf
                         status: ok
                       - demand_id: 1
-                        siren_number: 732-829-320
+                        gk_number: GK261109-829123320
                         bae_link: https://contoso.sharepoint.com/sites/klesia/bae/1.pdf
                         status: pending
                 empty:
@@ -204,23 +207,31 @@ paths:
       operationId: createDemand
       summary: Create a demand with its BAE PDF
       description: |
-        Creates one demand owned by the signed-in user, with status `pending`, and stores the PDF
-        (Bulletin d'Adhésion Entreprise) in SharePoint.
+        Creates one demand owned by the signed-in user, with status `pending`. The backend **copies the
+        uploaded PDF (Bulletin d'Adhésion Entreprise) into SharePoint and stores the resulting permanent
+        link in the database** (`Demand.BaeLink`), so that the user can open the document later from the
+        `bae_link` returned by `listDemands`. The browser never uploads to SharePoint, and the PDF is never
+        kept in the database or on the API server.
 
         Rules:
 
         1. Same authentication and authorization order as `listDemands`; failures store nothing.
-        2. `siren_number`: exactly nine ASCII digits (`^[0-9]{9}$`), leading zeros kept, no separators
-           (the frontend strips spaces and hyphens), no checksum rule.
+        2. `gk_number`: `GK` + six digits (a `YYMMDD` date) + `-` + nine digits
+           (`^GK[0-9]{6}-[0-9]{9}$`, e.g. `GK260902-144743112`), taken exactly as sent: the backend does not
+           trim, change case or reformat (the frontend normalizes before sending). No calendar-date or
+           checksum rule.
         3. `bae_file`: exactly one part, at most `Upload:MaxPdfSizeMb` MB (provisionally 10;
            1 MB = 1,048,576 bytes; identical to the frontend `maxPdfSizeMb`). The backend validates the
            real content (starts with `%PDF-`, declared type `application/pdf`); the file extension and
            the browser MIME type are never trusted alone.
         4. No other part is accepted. In particular there is **no `user_id` part**: the owner always
            comes from the token.
-        5. The demand is committed before `201` is sent, so the next `listDemands` contains it
-           (read-after-write). The backend then sends `demandUpdated` to the owner.
-        6. Not idempotent. The same SIREN or document may be submitted again and creates another
+        5. The PDF is copied into SharePoint first; only then is the row inserted with the SharePoint link.
+           If SharePoint is unavailable the answer is `503` and nothing is stored; if the insert fails after
+           the copy, the copy is removed on a best-effort basis and the answer is `5xx`. The demand is
+           committed before `201` is sent, so the next `listDemands` contains it (read-after-write). The
+           backend then sends `demandUpdated` to the owner.
+        6. Not idempotent. The same GK number or document may be submitted again and creates another
            demand. The frontend never retries automatically and never replays it after a 401 recovery.
         7. The frontend treats **any 2xx** as success and neither parses nor needs the body. No
            `Location` header is sent because no single-demand route exists.
@@ -232,7 +243,7 @@ paths:
             schema:
               $ref: "#/components/schemas/CreateDemandForm"
             encoding:
-              siren_number:
+              gk_number:
                 contentType: text/plain
               bae_file:
                 contentType: application/pdf
@@ -248,7 +259,7 @@ paths:
                 $ref: "#/components/schemas/Demand"
               example:
                 demand_id: 4
-                siren_number: 732-829-320
+                gk_number: GK261111-829123320
                 bae_link: https://contoso.sharepoint.com/sites/klesia/bae/4.pdf
                 status: pending
         "400":
@@ -379,18 +390,20 @@ components:
     Demand:
       type: object
       additionalProperties: false
-      required: [demand_id, siren_number, bae_link, status]
+      required: [demand_id, gk_number, bae_link, status]
       properties:
         demand_id:
           type: integer
           format: int32
           minimum: 1
           description: '`dbo.Demand.DemandId`; the stable rendering key.'
-        siren_number:
+        gk_number:
           type: string
-          pattern: '^[0-9]{3}-[0-9]{3}-[0-9]{3}$'
-          description: SIREN in display format `XXX-XXX-XXX` (formatted by the backend). Text, never a number.
-          examples: [732-829-320]
+          pattern: '^GK[0-9]{6}-[0-9]{9}$'
+          minLength: 18
+          maxLength: 18
+          description: GK (Geode Klesia) number, returned exactly as stored. Text, never reformatted.
+          examples: [GK260902-144743112]
         bae_link:
           type: string
           format: uri
@@ -425,13 +438,17 @@ components:
     CreateDemandForm:
       type: object
       additionalProperties: false
-      required: [siren_number, bae_file]
+      required: [gk_number, bae_file]
       properties:
-        siren_number:
+        gk_number:
           type: string
-          pattern: '^[0-9]{9}$'
-          description: Exactly nine digits, no spaces or hyphens, leading zeros kept.
-          examples: ["732829320"]
+          pattern: '^GK[0-9]{6}-[0-9]{9}$'
+          minLength: 18
+          maxLength: 18
+          description: |
+            GK number: `GK`, six digits (`YYMMDD` date), a hyphen, nine digits. Sent as is (already
+            trimmed and upper-cased by the frontend). No date or checksum validation.
+          examples: [GK260902-144743112]
         bae_file:
           type: string
           format: binary
@@ -482,7 +499,7 @@ components:
         errors:
           type: object
           description: |
-            Only on 400/422. Keyed by request part name (`siren_number`, `bae_file`); values are
+            Only on 400/422. Keyed by request part name (`gk_number`, `bae_file`); values are
             arrays of safe messages. The frontend only uses the keys.
           additionalProperties:
             type: array
@@ -492,8 +509,8 @@ components:
   responses:
     BadRequest:
       description: |
-        Malformed or invalid request: missing, duplicated or unknown multipart part, or `siren_number`
-        not exactly nine digits.
+        Malformed or invalid request: missing, duplicated or unknown multipart part, or `gk_number`
+        not matching `^GK[0-9]{6}-[0-9]{9}$`.
       headers:
         X-Correlation-Id:
           $ref: "#/components/headers/CorrelationId"
@@ -506,8 +523,8 @@ components:
             status: 400
             traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00
             errors:
-              siren_number:
-                - Must be exactly nine digits.
+              gk_number:
+                - Must match GK######-#########.
 
     Unauthorized:
       description: |
