@@ -382,7 +382,7 @@ components:
     DemandStatus:
       type: string
       description: |
-        Processing status (`ref.Status.Code`). `pending` = "En cours", `ok` = "Traité",
+        Processing status (`ref.Status.Code`). `pending` = "En cours", `ok` = "Traitée",
         `fail` = "En anomalie" in the French UI. The set is closed on the API side; adding a value is
         a contract change. The frontend nevertheless renders an unknown value as "Statut inconnu".
       enum: [pending, ok, fail]
