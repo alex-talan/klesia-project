@@ -10,7 +10,7 @@ argument-hint: "[contract|specs|database|backend|frontend] (default: all)"
 
 The two applications live in nested repositories: `klesia_api/` and `klesia_webapp/` (each has its own `.git`). Their specifications are `klesia_api/docs/specs/SPECIFICATIONS.md` and `klesia_webapp/docs/specs/SPECIFICATIONS.md`. Run commands from the workspace root. `$ARGUMENTS` limits the scope; with no argument run every step.
 
-**Lot scoping.** Each operation carries `x-implementation-status`. In Lot 1 only `sprint-1` operations (`getHealth`, `listDemands`) must exist in code. `adopted` operations (`createDemand`, `negotiateNotifications`) are checked in the contract, the specifications and the database, and in code only once code for them exists. Their absence from code in Lot 1 is **not** a finding; code for them in Lot 1 is (the webapp has no modal and no POST in Lot 1, and the backend adds no placeholder routes).
+**Lot scoping.** Each operation carries `x-implementation-status`. In Lot 1 only `sprint-1` operations (`getHealth`, `listDemands`, `negotiateNotifications`) must exist in code. The `adopted` operation (`createDemand`) is checked in the contract, the specifications and the database, and in code only once its code exists. Its absence from code in Lot 1 is **not** a finding; code for it in Lot 1 is (the webapp has no modal and no POST in Lot 1, and the backend adds no placeholder routes).
 
 ## Step 1 - The contract itself
 
@@ -18,7 +18,7 @@ The two applications live in nested repositories: `klesia_api/` and `klesia_weba
 python .claude/skills/check-contract/scripts/validate_contract.py
 ```
 
-(`py -3` on Windows if `python` is missing; needs `pyyaml` and `jsonschema`.) It checks: OpenAPI 3.1, every `$ref` resolves, unique `operationId`, `x-implementation-status` on every operation, only `/health` anonymous, `401`/`403`/`500` documented on every protected operation, all error responses `application/problem+json`, every example valid against its schema, snake_case property names (except `NegotiateResponse` and `ProblemDetails`), the single GK pattern `^GK[0-9]{6}-[0-9]{9}$`, scope `access_as_user`, servers without `/api/v1`.
+(`py -3` on Windows if `python` is missing; needs `pyyaml` and `jsonschema`.) With `--model klesia_webapp/src/models/demand.ts` it also compares the hand-written webapp types with the contract schemas (skipped with a note while the file does not exist). It checks: OpenAPI 3.1, every `$ref` resolves, unique `operationId`, `x-implementation-status` on every operation, only `/health` anonymous, `401`/`403`/`500` documented on every protected operation, all error responses `application/problem+json`, every example valid against its schema, snake_case property names (except `NegotiateResponse` and `ProblemDetails`), the single GK pattern `^GK[0-9]{6}-[0-9]{9}$`, scope `access_as_user`, servers without `/api/v1`.
 
 If `npx` is available also run `npx @redocly/cli lint contracts/openapi.yaml`. If a tool is missing or offline, say so in the report; do not install anything silently.
 
@@ -39,6 +39,7 @@ For each fact, read the contract and then both specifications (use `Grep`; do no
 | Status enum `pending` / `ok` / `fail` and French labels | 3.3 | DEM-02 |
 | `bae_link` permanent SharePoint HTTPS URL | OPEN-05, DEC-13 | DEM-03, INT-06 |
 | Negotiate response `{url, accessToken}`, hub `demands`, event `demandUpdated` without payload | 7.1, 7.2 | 6.4, 6.5 |
+| Two notifications, same `demandUpdated` event: N-1 *demand stored* (Lot 1 publisher, no production caller before Lot 2) and N-2 *extraction completed* (not specified) | 7.2 (NOT-01 to NOT-05) | BE-04 |
 | Upload limit `Upload:MaxPdfSizeMb` equals `maxPdfSizeMb` | 6.1, INT-05 | 3.2 |
 
 ## Step 3 - Database vs contract (`klesia_api/database/Klesia.Database`)
@@ -67,11 +68,12 @@ python .claude/skills/check-contract/scripts/validate_contract.py --actual <file
 - Errors are `ProblemDetails` for `400/401/403/413/415/422/5xx`, including the JWT challenge (`401` with `WWW-Authenticate: Bearer`) and identical bodies for every `403` cause; no stack trace, SQL, token or document URL.
 - CORS: exact configured origins, methods `GET, POST, OPTIONS`, request headers `Authorization, Content-Type, X-Requested-With, X-SignalR-User-Agent`, exposed `X-Correlation-Id`, max age 600, no credentials.
 - Identity comes only from the validated token (`oid`); no `user_id` in any input.
+- Hosting (Azure Container Apps, API specification section 6.3): the container listens on plain HTTP 8080 with no Kestrel TLS; `UseForwardedHeaders` (`XForwardedFor`, `XForwardedProto`) is registered first; the ingress CORS policy is disabled in any deployment file (the API owns CORS); `/health` is the only probe route; the hosting ingress may return its own non-JSON `502/503/504`, which the contract allows.
 
 ## Step 5 - Frontend vs contract (`klesia_webapp/`)
 
 - Request URL = `VITE_API_BASE_URL` + the contract path; the Bearer token is the API access token (never the ID token) and is sent only to the API origin.
-- Types: if generated types exist (for example with `openapi-typescript`), regenerate to a scratchpad file and diff against the committed file; generated files are never hand-edited. If models are hand-written, compare them field by field with the contract schemas. Flag any DTO redefined independently of the contract.
+- Types: the webapp types are hand-written (`src/models/demand.ts`, webapp specification MODEL-01 to MODEL-03). Run `validate_contract.py --model` and read the file against `Demand`, `DemandStatus` and `UserDemands`: same field names, `integer` as `number`, `string` as `string`, every field required, `KnownDemandStatus` equal to the contract enum, `Demand.status` kept as `string`, `parseUserDemands` rules. A field missing on either side is BREAKING; any other DTO redefined outside this file is DRIFT. If a generated client is introduced later, regenerate it to a scratchpad file and diff instead.
 - Error handling follows the status code (`401` one recovery, `403` access denied, `5xx` and network generic); server `title`/`detail` is never rendered.
 - Fixtures, mocks and the dev simulator use the contract's field names and examples. The simulator is not proof of backend conformity.
 - SignalR: `VITE_SIGNALR_HUB_URL` ends before `/negotiate`; `withCredentials: false`; the `demandUpdated` payload is ignored.

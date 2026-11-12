@@ -19,7 +19,7 @@ For features affecting the HTTP boundary:
 1. inspect both applications;
 2. update the contract first;
 3. modify the backend implementation;
-4. update/regenerate the frontend API layer;
+4. update the frontend API layer (hand-written types in `klesia_webapp/src/models/demand.ts`);
 5. run backend tests;
 6. run frontend tests;
 7. run integration/contract tests.
@@ -45,12 +45,12 @@ The canonical API specification is: `contracts/openapi.yaml`
    - Read the existing OpenAPI contract.
    - Update the contract first.
    - Implement the backend changes.
-   - Regenerate frontend TypeScript types.
+   - Update the hand-written frontend types (`klesia_webapp/src/models/demand.ts`) so that they mirror the contract exactly.
    - Update frontend API consumption.
    - Run backend, frontend, and integration tests.
 5. Changes to authentication, pagination, validation, error handling, and response formats must be reflected in the contract.
 6. Avoid breaking API changes unless explicitly approved.
-7. Do not manually modify generated API client files.
+7. The frontend types are **hand-written** (webapp specification §6.1, MODEL-01 to MODEL-03) and must stay identical to the contract schemas; `check-contract` verifies it. If a generated client is ever introduced, this rule changes first and generated files are never edited by hand.
 
 ### Responsibilities
 
@@ -61,5 +61,5 @@ The canonical API specification is: `contracts/openapi.yaml`
 
 **klesia-webapp**:
 - Consumes the OpenAPI contract.
-- Uses generated TypeScript types.
-- Does not redefine backend DTOs independently.
+- Mirrors the contract schemas in hand-written TypeScript types (`src/models/demand.ts`), the only place where backend DTOs are represented.
+- Does not redefine backend DTOs anywhere else or independently of the contract.
