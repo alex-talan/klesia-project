@@ -12,13 +12,13 @@ Goal: prove that what the API sends is what the webapp expects, using the contra
 
 ## Level 1 - Backend HTTP pipeline against the contract
 
-Where: `klesia_api/tests/IntegrationTests` (xUnit, FluentAssertions, NSubstitute; `WebApplicationFactory`, signed test tokens, in-memory repositories - see `klesia_api/CLAUDE.md`). No real Entra tenant, no SQL.
+Where: `klesia_api/tests/IntegrationTests` (xUnit, FluentAssertions, NSubstitute; `WebApplicationFactory`, signed test tokens, in-memory repositories - see `klesia_api/CLAUDE.md`). No real Entra tenant, no database.
 
 - Load the contract in the test and validate every response body against its schema (status, `Content-Type`, required fields, GK pattern, status enum). If no JSON-schema package is already in `Directory.Packages.props`, propose one to the user instead of adding it silently.
-- Lot 1 cases (API specification section 9): AT-01 to AT-11 (401/403 matrix, empty list, several demands, no cross-user leakage, ignored `user_id`), AT-13 and AT-14 (CORS preflight allowed and refused), AT-12 and AT-19 (SQL down, stored non-HTTPS `bae_link`: sanitized `5xx`), AT-20 (no `oid`), AT-21 (every `401`/`403`/`5xx` is `application/problem+json` with `traceId`, plus `X-Correlation-Id`), AT-22 (`/health`).
+- Lot 1 cases (API specification section 9): AT-01 to AT-11 (401/403 matrix, empty list, several demands, no cross-user leakage, ignored `user_id`), AT-13 and AT-14 (CORS preflight allowed and refused), AT-12 and AT-19 (database down, stored non-HTTPS `bae_link`: sanitized `5xx`), AT-20 (no `oid`), AT-21 (every `401`/`403`/`5xx` is `application/problem+json` with `traceId`, plus `X-Correlation-Id`), AT-22 (`/health`).
 - Both `403` causes (unknown user, inactive user, missing scope) return the identical status and body.
 - Lot 2 cases: AT-23 to AT-30 (`POST /api/v1/demands`: `201` and body, `400`, `422`, `413`, `415`, `401/403`, duplicates allowed, nothing stored on failure) and AT-31, AT-32 (negotiate, preflight with `X-Requested-With` and `X-SignalR-User-Agent`, no credentials header). The SharePoint store is faked behind `IBaeDocumentStore`; also assert that the link written to the database is the one `GET` returns.
-- SQL constraint tests (AT-15, AT-16) need a real database: run only when `KLESIA_TEST_SQL_CONNECTION` is set, else report them as not run.
+- Database constraint tests (AT-15, AT-16) need a real, disposable Azure Database for MySQL 8.4 database already migrated by `database/Klesia.Database`: run only when `KLESIA_TEST_DB_CONNECTION` is set, else report them as not run. Include the case-sensitive GK and status checks (for example `gk260902-144743112` must be rejected).
 
 Run: `dotnet test` on the solution or the integration project (add a filter when the project defines one).
 
@@ -34,7 +34,7 @@ Run, from `klesia_webapp/`: `npm run type-check`, `npm run test:run` (and `npm r
 
 ## Level 3 - Live wire test (environment-dependent, optional)
 
-Needs a dev API connected to a dev SQL database, a real Entra test registration and a test user. Never run it against production, and never commit or log a token. The in-memory tests above do not need it; report Level 3 as "not run" when the prerequisites are missing.
+Needs a dev API connected to a dev Azure Database for MySQL database (the developer's Entra account must be a database user and the client IP allowed by the server firewall), a real Entra test registration and a test user. Never run it against production, and never commit or log a token. The in-memory tests above do not need it; report Level 3 as "not run" when the prerequisites are missing.
 
 1. Start the API in Development (`klesia_api/docs/local-development.md`; `http://localhost:5180`).
 2. Put a contract proxy between the webapp and the API so every request and response is validated against the contract. With Stoplight Prism available: `npx @stoplight/prism-cli proxy contracts/openapi.yaml http://localhost:5180` (check `--help` for the exact flags first, in particular the one that turns violations into errors).

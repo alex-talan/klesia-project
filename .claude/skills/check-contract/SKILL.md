@@ -43,11 +43,14 @@ For each fact, read the contract and then both specifications (use `Grep`; do no
 
 ## Step 3 - Database vs contract (`klesia_api/database/Klesia.Database`)
 
-- `CK_Demand_GKNumber` accepts exactly the contract pattern; `GKNumber` is `CHAR(18)`.
-- `ref.Status` codes (`CK_Status_Code`, `Scripts/01_RefData.sql`) equal the `DemandStatus` enum.
-- `CK_Demand_BaeLink` requires `https://`, matching `bae_link`.
-- Primary keys are `Id` and queries alias them to the domain names; `demand_id` is `dbo.Demand.Id`; list order is `Id DESC`.
-- No SQL file or script refers to a column that no longer exists (for example `RoleId` on `sec.Role`).
+The database is Azure Database for MySQL (DEC-14 of the API specification): tables `sec_Role`, `sec_User`, `ref_Status`, `Demand`, created by `Migrations/*.sql` and seeded by `Seeds/*.sql`.
+
+- `CK_Demand_GKNumber` accepts exactly the contract pattern **case-sensitively** (the default collation `utf8mb4_0900_ai_ci` ignores case, so the regex needs the `'c'` match type) and the length is 18; `GKNumber` is `CHAR(18)`.
+- `ref_Status` codes (`CK_Status_Code`, `Seeds/01_RefData.sql`) equal the `DemandStatus` enum, matched case-sensitively.
+- `CK_Demand_BaeLink` requires `https://`, matching `bae_link`. In MySQL `LIKE` ignores case, so the API must still validate the URL itself.
+- `sec_User.UserUniqueId` holds the lower-case canonical GUID that `user_id` returns.
+- Primary keys are `Id` and queries alias them to the domain names; `demand_id` is `Demand.Id`; list order is `Id DESC`.
+- No script refers to a table or column that no longer exists (T-SQL leftovers, `RoleId` on `sec_Role`, old `sec.`/`ref.`/`dbo.` names), and no SQL comment contains a semicolon (the DbUp migrator splits statements on it).
 
 ## Step 4 - Backend vs contract (`klesia_api/`)
 

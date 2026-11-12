@@ -7,7 +7,7 @@ info:
   description: |
     **Single source of truth** for the HTTP boundary between the Vue SPA
     (`klesia-webapp`, Azure Static Web Apps) and the .NET back-office API
-    (`klesia-api`, Azure App Service + Azure SQL Database).
+    (`klesia-api`, Azure App Service + Azure Database for MySQL).
 
     Derived from `klesia_api/docs/specs/SPECIFICATIONS.md` (v1.3) and
     `klesia_webapp/docs/specs/SPECIFICATIONS.md` (v1.2). Any change to a route,
@@ -123,13 +123,13 @@ paths:
       operationId: getHealth
       summary: Check API health
       description: |
-        Anonymous liveness/readiness probe (process and SQL dependency). Not under `/api/v1`.
+        Anonymous liveness/readiness probe (process and database dependency). Not under `/api/v1`.
         Returns no user data and no dependency details. Not called by the browser, so no CORS rule applies.
       security: []
       x-implementation-status: sprint-1
       responses:
         "200":
-          description: The API and its SQL dependency respond.
+          description: The API and its database dependency respond.
           content:
             application/json:
               schema:
@@ -137,7 +137,7 @@ paths:
               example:
                 status: ok
         "503":
-          description: The API or its SQL dependency is unavailable.
+          description: The API or its database dependency is unavailable.
           content:
             application/json:
               schema:
@@ -152,7 +152,7 @@ paths:
       summary: List the signed-in user's demands
       description: |
         Returns the identity of the signed-in user and **only their own** demands
-        (`Demand.UserId` = the matched `sec.User`), most recent first. An empty list is a valid `200`.
+        (`Demand.UserId` = the matched `sec_User`), most recent first. An empty list is a valid `200`.
         Takes no parameter: any `user_id` sent in the query or a header is ignored.
 
         The frontend calls it once after authentication and then only on: successful reconnection,
@@ -383,7 +383,7 @@ components:
     DemandStatus:
       type: string
       description: |
-        Processing status (`ref.Status.Code`). `pending` = "En cours", `ok` = "Traitée",
+        Processing status (`ref_Status.Code`). `pending` = "En cours", `ok` = "Traitée",
         `fail` = "En anomalie" in the French UI. The set is closed on the API side; adding a value is
         a contract change. The frontend nevertheless renders an unknown value as "Statut inconnu".
       enum: [pending, ok, fail]
@@ -397,7 +397,7 @@ components:
           type: integer
           format: int32
           minimum: 1
-          description: '`dbo.Demand.DemandId`; the stable rendering key.'
+          description: '`Demand.Id`; the stable rendering key.'
         gk_number:
           type: string
           pattern: '^GK[0-9]{6}-[0-9]{9}$'
@@ -425,11 +425,11 @@ components:
           type: string
           format: uuid
           description: |
-            The user's Entra `oid` (`sec.User.UserUniqueId`), **not** the SQL `UserId`. Informational
+            The user's Entra `oid` (`sec_User.UserUniqueId`, lower-case canonical form), **not** the internal database `Id`. Informational
             only: the frontend never uses it as proof of identity.
         user_name:
           type: string
-          description: Full name from the database (`sec.User.Name`).
+          description: Full name from the database (`sec_User.Name`).
         demands:
           type: array
           description: The user's own demands, `demand_id` descending. May be empty.
@@ -625,7 +625,7 @@ components:
             traceId: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00
 
     ServiceUnavailable:
-      description: A dependency (SQL Database, SharePoint, Azure SignalR) is unavailable. Never reported as 403.
+      description: A dependency (database, SharePoint, Azure SignalR) is unavailable. Never reported as 403.
       headers:
         X-Correlation-Id:
           $ref: "#/components/headers/CorrelationId"
