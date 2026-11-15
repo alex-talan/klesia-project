@@ -10,6 +10,12 @@ The canonical HTTP contract is:
 
 `contracts/openapi.yaml`
 
+The normative architecture reference is:
+
+`architecture-plan.md`
+
+Agents MUST read `architecture-plan.md` before any cross-application or structural change (HTTP boundary, authentication, data model, hosting, real-time, new external dependency). It sets the architecture principles (AP-01 to AP-14) and the change sequences (section 15); it references the specifications and does not replace the contract.
+
 Never introduce or modify an API request/response contract without updating the canonical contract.
 
 ## Cross-project changes
