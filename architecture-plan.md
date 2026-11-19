@@ -1,8 +1,8 @@
 # KLESIA — Software Architecture Plan
 
 **Document ID:** KLESIA-ARCH
-**Version:** 1.0
-**Date:** 2026-11-15
+**Version:** 1.1
+**Date:** 2026-11-19
 **Status:** Baseline — agreed structure, open items tracked in §14
 **Language:** English (all user-facing product text is French, §3 AP-13)
 **Audience:** Architects, backend and frontend engineers, database and infrastructure engineers, QA, and AI coding agents working in this workspace
@@ -76,7 +76,7 @@ sequenceDiagram
     participant FE as klesia-webapp
     participant API as klesia-api (request)
     participant SP as SharePoint
-    participant DB as MySQL
+    participant DB as Azure SQL Database
     participant SR as Azure SignalR
     participant W as klesia-api (worker)
     participant DI as Document Intelligence
@@ -117,7 +117,7 @@ Three architectural properties are visible here and are load-bearing for the who
 | Document storage and access control | SharePoint | the database, the API disk, the browser |
 | Content extraction (OCR) | Azure Document Intelligence | the API's own code, the frontend |
 | Real-time delivery | Azure SignalR Service (Serverless) | custom WebSocket code, polling |
-| Schema ownership | the DbUp migrator (`database/Klesia.Database`) | the API at runtime, an ORM |
+| Schema ownership | the SQL database project (`database/Klesia.Database`) | the API at runtime, an ORM |
 | Presentation, interaction, French wording | `klesia-webapp` | the API (it returns codes, not labels) |
 
 ---
@@ -130,16 +130,16 @@ These are the rules that must survive every future change. They are the standard
 |---|---|---|
 | **AP-01** | **Contract first.** No HTTP behaviour changes before `contracts/openapi.yaml` changes. | A behaviour diff without a contract diff is a defect (root `CLAUDE.md`, GOV-01). |
 | **AP-02** | **Business logic lives in the backend.** | The frontend validates for usability, never for correctness; the backend re-validates everything (`GK` format, PDF content, size, ownership). |
-| **AP-03** | **Dependencies point inward.** `WebApi → Infrastructure → Application → Domain`. | Domain knows nothing of HTTP, MySQL, Azure or SignalR. |
+| **AP-03** | **Dependencies point inward.** `WebApi → Infrastructure → Application → Domain`. | Domain knows nothing of HTTP, SQL Server, Azure or SignalR. |
 | **AP-04** | **One client layer.** The SPA reaches the API only through its service layer; visual components never call `fetch`. | Transport, auth and error mapping exist once (`demandService.ts`, `realtimeService.ts`). |
 | **AP-05** | **Identity comes from the token.** The user is the `oid` of a validated access token. | No `user_id` is ever accepted in a path, query, header or body (`DEC-20`). |
 | **AP-06** | **Fail closed, disclose nothing.** | Unknown user and disabled user return an identical `403`; bodies carry no stack trace, SQL, token, link or other user's data. |
 | **AP-07** | **Configuration over code, and no secrets.** | Tenant, origins, endpoints, limits are configuration validated at startup; the API holds no secret at all (`HOST-07`). |
 | **AP-08** | **Stateless replicas; the database is the only authority.** | Any replica serves any request; nothing correctness-bearing lives in memory or on the container disk (`HOST-08`). |
 | **AP-09** | **Push signals, it does not carry.** | Notifications have no payload and are never trusted or rendered; the client re-reads state (`RT-03`, `NOT-04`). |
-| **AP-10** | **Passwordless, managed identity everywhere.** | MySQL, SharePoint/Graph, Document Intelligence and SignalR are all reached with one user-assigned managed identity (`DEC-06`, `HOST-06`). |
+| **AP-10** | **Passwordless, managed identity everywhere.** | Azure SQL Database, SharePoint/Graph, Document Intelligence and SignalR are all reached with one user-assigned managed identity (`DEC-06`, `HOST-06`). |
 | **AP-11** | **One owner per responsibility.** | No parallel implementation of auth, HTTP access, the domain model or the reload trigger on either side. |
-| **AP-12** | **The migrator owns the schema.** | No EF Core, no `DbContext`, no runtime DDL; applied scripts are immutable (`DEC-02`, `DB-14`). |
+| **AP-12** | **The SQL database project owns the schema.** | No EF Core, no `DbContext`, no runtime DDL; the schema is declared in `database/Klesia.Database` and published as a DACPAC with data-loss blocking on (`DEC-02`, `DB-11`, API specification §3.5). |
 | **AP-13** | **French for users, English for engineers.** | All UI text is French and chosen client-side from status codes; all code, identifiers, tests and documents are English. |
 | **AP-14** | **No speculative capability.** | No extra route, field, event, library or refresh trigger beyond what is specified (`DEC-22`, `RT-04`). |
 
@@ -156,7 +156,7 @@ flowchart TB
     subgraph KLESIA["KLESIA system"]
         FE["klesia-webapp<br/>Vue 3 SPA<br/>Azure Static Web Apps"]
         API["klesia-api<br/>ASP.NET Core .NET 10<br/>Azure Container Apps"]
-        DB[("Azure Database for MySQL<br/>Flexible Server 8.4<br/>database: klesia")]
+        DB[("Azure SQL Database<br/>SQL Server engine")]
     end
 
     ENTRA["Microsoft Entra ID"]
@@ -196,7 +196,7 @@ The entire externally observable surface of KLESIA is **four HTTP operations and
                                                                                            |
                                                             (3) managed identity, no secret |
                                                                                            v
-                                                        [ MySQL ] [ SharePoint ] [ Doc Intelligence ] [ SignalR ]
+                                                        [ Azure SQL ] [ SharePoint ] [ Doc Intelligence ] [ SignalR ]
 ```
 
 1. Everything from the browser is untrusted input, including the notification payload, the GK number, the file and its declared MIME type.
@@ -229,12 +229,12 @@ Recording the absent components is as architecturally meaningful as recording th
 | Frontend hosting | Azure Static Web Apps | static bundle, platform `/.auth` **not** used |
 | Backend runtime | ASP.NET Core on **.NET 10** (`net10.0`) | `DEC-01`, SDK pinned in `global.json` |
 | Backend structure | Clean Architecture: `Domain`, `Application`, `Infrastructure`, `WebApi` | `AP-03` |
-| Backend data access | **Dapper** + `MySqlConnector` | `DEC-02`, `DEC-14`; EF Core forbidden |
+| Backend data access | **Dapper** + `Microsoft.Data.SqlClient` | `DEC-02`, `DEC-14`; EF Core forbidden |
 | Backend auth | `Microsoft.AspNetCore.Authentication.JwtBearer`, v2.0 access tokens | `AUTH-01` |
 | Backend tests | xUnit, FluentAssertions, NSubstitute, `WebApplicationFactory` | signed test tokens, in-memory repositories |
-| Backend hosting | **Azure Container Apps**, container on HTTP 8080, non-root | `DEC-15` (supersedes App Service, `DEC-07`) |
-| Database | **Azure Database for MySQL – Flexible Server 8.4**, InnoDB, `utf8mb4_0900_ai_ci` | `DEC-14` (replaces SQL Server), `DB-13`, `DB-15` |
-| Schema tooling | **DbUp** migrator (`database/Klesia.Database`), numbered scripts + idempotent seeds | `DEC-02`, `DB-11`, `DB-14` |
+| Backend hosting | **Azure Container Apps**, container on HTTP 8080, non-root | `DEC-15` |
+| Database | **Azure SQL Database** (SQL Server engine) | `DEC-14` |
+| Schema tooling | **SQL database project** (`Microsoft.Build.Sql`, `Klesia.Database.sqlproj`) built into a **DACPAC** and published with `SqlPackage`; idempotent post-deployment seeds | `DEC-02`, `DEC-14`, `DB-11`, API spec §3.5 |
 | Identity provider | Microsoft Entra ID, single tenant | `OPEN-03` supplies the values |
 | Documents | SharePoint document library via Microsoft Graph, `Sites.Selected` | `DEC-13`, `OPEN-11` |
 | Extraction | Azure AI Document Intelligence, custom BAE model | `DEC-18`, `OPEN-09` |
@@ -272,7 +272,7 @@ Domain           entities and value objects only: ApplicationUser, Demand,
 **Architectural rules.**
 
 - Controllers translate HTTP and nothing else: no business rule, no SQL, no Azure SDK type.
-- Every external system is reached through a port declared in `Application` and implemented in `Infrastructure`. Callers never see a `HubConnection`, a `GraphServiceClient`, a `MySqlConnection` or a Document Intelligence type.
+- Every external system is reached through a port declared in `Application` and implemented in `Infrastructure`. Callers never see a `HubConnection`, a `GraphServiceClient`, a `SqlConnection` or a Document Intelligence type.
 - **Token validation is separated from business authorisation on purpose**: the JWT middleware proves *who* the caller is (`401`), the authorisation policy proves *what* the token permits (`403`), and the allowlist check lives in `DemandService` because it is a business rule about an application user, not a transport concern (`AUTH-IMPL`).
 - The background worker is an `Infrastructure` hosted service driving an `Application` use case. It has no caller, no token and no HTTP context; it takes its inputs from the database and SharePoint only (`AUTH-02`).
 - JSON naming is declared explicitly on the `WebApi` contract records. Database casing never leaks into JSON and JSON casing never dictates SQL (`DEC-21`).
@@ -300,11 +300,13 @@ utils/        GK number and PDF validation, constants, design tokens
 - **Two configuration channels, on purpose.** `VITE_*` variables are public and baked at build time (origins, tenant, scope); `public/config/app-config.json` is read at runtime so an operator can change the PDF size limit by republishing one static file, with no rebuild (`§3.2`). A failure in the runtime channel disables upload only — sign-in and the list keep working (`AC-20`).
 - **The SPA trusts nothing.** It never treats `user_id` as proof of identity, never renders server `title`/`detail`, never renders a notification payload, never opens a non-HTTPS `bae_link`, and never persists tokens, GK numbers or links outside MSAL's own cache.
 
-### 6.3 Database migrator — `database/Klesia.Database`
+### 6.3 Database project — `database/Klesia.Database`
 
-A standalone DbUp console project, deployed and run **separately from the API** (`HOST-12`). Versioned scripts in `Migrations/` are applied once and journalled; `Seeds/` scripts run on every execution and must be idempotent. One DDL object per script, because MySQL DDL is not transactional (`DB-14`).
+A standalone **SQL database project** (SDK-style, `Microsoft.Build.Sql`, targeting Azure SQL Database) whose `Schemas/` and `Tables/` files declare the **desired state** of the schema. It is built into a DACPAC and published with `SqlPackage` by the pipeline, **separately from the API** (`HOST-12`); `SqlPackage` computes the difference against the target database and applies it. The `Scripts/` seed files are pulled in by a single `PostDeployment.sql` and run after **every** publish, so they must be idempotent: reference data is merged on its stable `Code`, and the user seed is insert-only so that a user deactivated by an administrator is never reactivated (`DEC-05`). An intentionally empty `database/Directory.Build.props` isolates the project from the .NET build settings.
 
-**Why a separate migrator.** The runtime identity holds data privileges only — no DDL (`§6.2`). Schema change is a deployment-time act performed by a more privileged principal, which is what keeps a compromised API from altering the schema.
+**Why a separate project.** The runtime identity holds data privileges only — no DDL (`§6.2` of the API specification). Schema change is a deployment-time act performed by a more privileged principal, which is what keeps a compromised API from altering the schema.
+
+**What the declarative model changes.** The definition files always show the *current* schema, and there are no numbered scripts to keep immutable. The price is that the *transition* is computed at publish time, so a rename or a narrowed column can be read as a drop and re-create. Two safeguards are therefore part of the architecture: the publish profile keeps **data-loss blocking enabled** and never drops objects missing from the source, and the generated publish script is **reviewed before it is applied** (`DB-11`).
 
 ### 6.4 Development environment
 
@@ -345,7 +347,7 @@ This is what prevents the classic failure mode of two teams agreeing in a meetin
 valid access token (signature, issuer, tid, audience, lifetime)   else 401
    -> oid claim present and a GUID                                else 401
    -> delegated scope access_as_user in scp                       else 403
-   -> user exists in sec_User AND IsActive = 1                    else 403  (identical body)
+   -> user exists in sec.User AND IsActive = 1                    else 403  (identical body)
    -> business logic, scoped to own data only
 ```
 
@@ -403,7 +405,7 @@ The frontend's dev simulator implements the *same* contract over the *same* prot
 
 | Data | System of record | Exposed to the browser |
 |---|---|---|
-| Users, roles, statuses, demands, extracted information and formulas | Azure Database for MySQL, database `klesia` | only the four fields of a `Demand`, plus `user_id`/`user_name` |
+| Users, roles, statuses, demands, extracted information and formulas | Azure SQL Database | only the four fields of a `Demand`, plus `user_id`/`user_name` |
 | BAE PDF documents | SharePoint document library | as a permanent HTTPS link, opened under the user's own SSO session |
 | User identity, authentication | Microsoft Entra ID | as tokens held by MSAL |
 | Extraction results in flight | transient, in the worker | never |
@@ -411,22 +413,22 @@ The frontend's dev simulator implements the *same* contract over the *same* prot
 
 ### 8.2 Model
 
-Six tables in one database, because MySQL has no schemas inside a database; the former schema grouping survives as the prefixes `sec_` (security) and `ref_` (reference data), with business tables unprefixed (`DB-02`).
+Six tables in one database, grouped by three SQL schemas: `sec` (security), `ref` (reference and lookup data) and `dbo` (business data, extraction tables included) (`DB-02`). Physical names are schema-qualified (`sec.User`); the diagram uses the logical names.
 
 ```mermaid
 erDiagram
-    sec_Role ||--o{ sec_User : RoleId
-    sec_User ||--o{ Demand : UserId
-    ref_Status ||--o{ Demand : StatusId
+    Role ||--o{ User : RoleId
+    User ||--o{ Demand : UserId
+    Status ||--o{ Demand : StatusId
     Demand ||--o| DemandInformation : DemandId
     DemandInformation ||--|{ DemandFormula : DemandInformationId
 ```
 
 **The identity distinction is the single most error-prone point in the data model** (`§3.2`):
 
-- `sec_User.Id` — internal `INT` primary key, used for foreign keys and never leaves the backend;
-- `sec_User.UserUniqueId` — the Entra `oid`, `CHAR(36)`, lower-case canonical form: this is what the API returns as `user_id`, what the allowlist is keyed by, and what SignalR targets;
-- `Demand.Id` — what the contract calls `demand_id` and the SPA uses as its rendering key.
+- `sec.User.Id` — internal `INT IDENTITY` primary key, used for foreign keys and never leaves the backend;
+- `sec.User.UserUniqueId` — the Entra `oid`, stored as a native `UNIQUEIDENTIFIER`: this is what the API returns as `user_id`, what the allowlist is keyed by, and what SignalR targets;
+- `dbo.Demand.Id` — what the contract calls `demand_id` and the SPA uses as its rendering key.
 
 Conflating the first two would either break SignalR targeting or leak an internal identifier into the contract.
 
@@ -437,15 +439,15 @@ Conflating the first two would either break SignalR targeting or leak an interna
 - **The list is returned in full**, `demand_id` descending. No pagination, no filtering, no sorting contract. The order is a display default, not a business guarantee — adding pagination later is therefore an additive contract change (§15.3).
 - **Extracted data is stored and never exposed** (`DEC-22`). No route reads `DemandInformation` or `DemandFormula`.
 - **Third-normal-form associations.** Role, status and user names are never copied onto `Demand`.
-- **Referential integrity is declared, deletion is not cascaded.** InnoDB `RESTRICT` is the default and no `ON DELETE` action is declared (`DB-09`).
-- **Least privilege at the data layer.** The runtime identity holds `SELECT` on the six tables, `INSERT` on the three business tables, and `UPDATE` on the single column `Demand.StatusId`. No `DELETE`, no other `UPDATE`, no DDL.
-- **Case sensitivity is explicit where it matters.** The collation is accent- and case-insensitive, so the checks on `ref_Status.Code` and `Demand.GKNumber` state a case-sensitive match deliberately.
+- **Referential integrity is declared, deletion is not cascaded.** Deletes use `NO ACTION` and no cascade is declared (`DB-09`).
+- **Least privilege at the data layer.** The runtime identity has read access to the six tables (`db_datareader`), `INSERT` on the three `dbo` business tables, and `UPDATE` on the single column `dbo.Demand.StatusId` (a column-level grant). No `DELETE`, no other `UPDATE`, no DDL.
+- **Case sensitivity is explicit where it matters.** The model collation is case-insensitive (`1033, CI`), so the checks on `ref.Status.Code` and `dbo.Demand.GKNumber` state a case-sensitive match deliberately, through an explicit binary collation (`Latin1_General_100_BIN2`).
 
 ### 8.4 Data flows
 
 | Flow | Path |
 |---|---|
-| Read | token → `oid` → `sec_User` allowlist → `Demand` where `UserId` = own id → DTO → JSON |
+| Read | token → `oid` → `sec.User` allowlist → `Demand` where `UserId` = own id → DTO → JSON |
 | Write | multipart → validate → SharePoint copy → `INSERT Demand(pending)` → commit → `N-1` → enqueue id |
 | Extract | queue id → re-read status/link/owner → SharePoint stream → Document Intelligence → validate → `INSERT` extraction + `UPDATE` status in **one transaction** → `N-2` |
 | Recover | sweep finds demands left `pending` beyond `Extraction:StaleAfterMinutes` → re-enqueue |
@@ -471,7 +473,7 @@ The extraction write is one transaction and the worker proceeds only if the dema
 
 ### 9.3 Secrets
 
-**The API has no secret.** Database access is passwordless (the Entra token is the password), Graph, Document Intelligence and SignalR use the same user-assigned managed identity, and Entra metadata is public. The SPA has no secret either: every `VITE_*` value is public by construction and baked into the bundle. Consequently there is no key rotation, no connection string in configuration, and nothing to leak in an image, a repository or a log.
+**The API has no secret.** Database access is passwordless (`Authentication=Active Directory Default`), Graph, Document Intelligence and SignalR use the same user-assigned managed identity, and Entra metadata is public. The SPA has no secret either: every `VITE_*` value is public by construction and baked into the bundle. Consequently there is no key rotation, the database connection string carries no secret, and there is nothing to leak in an image, a repository or a log.
 
 If a secret ever becomes unavoidable it is a Container Apps secret or a Key Vault reference resolved through the managed identity — never in the image, the repository, a Bicep default or a log (`HOST-07`).
 
@@ -501,28 +503,28 @@ Browser ──HTTPS──> Container Apps ingress (TLS ends here) ──HTTP:808
 Browser ──WSS────> Azure SignalR Service
 Browser ──HTTPS──> SharePoint (user's own SSO session)
 
-klesia-api ──TLS:3306──> Azure Database for MySQL Flexible Server
+klesia-api ──TLS:1433──> Azure SQL Database
 klesia-api ──HTTPS─────> Microsoft Graph (SharePoint), Document Intelligence, Azure SignalR
            all outbound calls authenticated by one user-assigned managed identity
 ```
 
 ### 10.2 Runtime characteristics
 
-- **Image.** Multi-stage `Dockerfile` at the API repository root; the final image holds only the published API — no migrator, tests, docs, `.claude/`, local settings or `.git`. Base images pinned; deployed images tagged with the **commit SHA**, never `latest`.
+- **Image.** Multi-stage `Dockerfile` at the API repository root; the final image holds only the published API — no database project or DACPAC, tests, docs, `.claude/`, local settings or `.git`. Base images pinned; deployed images tagged with the **commit SHA**, never `latest`.
 - **Process.** Plain HTTP on 8080, non-root user, no certificate and no Kestrel TLS.
-- **Probes.** Startup and readiness use `GET /health`; **liveness is a TCP probe**, deliberately — `/health` reports `503` when MySQL is down, and restarting replicas does not repair a database outage. No route is added for probes.
-- **Scaling.** Stateless replicas, 0..N. Scale-to-zero makes the first request slow (token acquisition plus a TLS connection to MySQL); the SPA's error banner and "Réessayer" cover it, and an operator may keep one replica warm. A minimum of one also avoids scaling in a replica mid-extraction (`OPEN-08e`, `OPEN-10`).
+- **Probes.** Startup and readiness use `GET /health`; **liveness is a TCP probe**, deliberately — `/health` reports `503` when the database is down, and restarting replicas does not repair a database outage. No route is added for probes.
+- **Scaling.** Stateless replicas, 0..N. Scale-to-zero makes the first request slow (token acquisition plus a TLS connection to Azure SQL Database); the SPA's error banner and "Réessayer" cover it, and an operator may keep one replica warm. A minimum of one also avoids scaling in a replica mid-extraction (`OPEN-08e`, `OPEN-10`).
 - **Shutdown.** Clean SIGTERM handling drains in-flight requests and cancels running extractions, which the recovery sweep later re-queues.
 - **Logs.** Console only; Log Analytics collects them.
 
 ### 10.3 Pipeline
 
 ```text
-build + test  ->  build image, push (SHA tag)  ->  run DbUp migrator (deployment principal)
+build + test  ->  build image, push (SHA tag)  ->  publish the DACPAC with SqlPackage (deployment principal)
               ->  deploy new revision  ->  smoke test GET /health  ->  previous revision kept for rollback
 ```
 
-**The ordering constraint is architectural:** the migrator runs *before* the new revision, and the previous revision keeps serving during and after a rollback. Therefore **every migration must be backward compatible with the previous API version** — add first, remove in a later release. The migrator never runs at API startup, and the runtime identity has no DDL rights.
+**The ordering constraint is architectural:** the SQL project is published *before* the new revision, and the previous revision keeps serving during and after a rollback. Therefore **every schema change must be backward compatible with the previous API version** — add first, remove in a later release — and the generated publish script is reviewed with data-loss blocking left on. The project is never published at API startup, and the runtime identity has no DDL rights.
 
 GitHub Actions authenticates to Azure with an OpenID Connect federated credential; no deployment secret is stored.
 
@@ -530,9 +532,9 @@ GitHub Actions authenticates to Azure with an OpenID Connect federated credentia
 
 | Environment | Frontend | API | Database | Configuration source |
 |---|---|---|---|---|
-| Local | Vite dev server on `http://localhost:5173`, dev simulator or a real dev SignalR resource | `dotnet run` on `http://localhost:5180` | dev MySQL, developer's own Entra identity (`az login`) | `.env.local`, `appsettings.Local.json` (both git-ignored) |
-| Dev / Staging | Static Web Apps | Container Apps revision | Flexible Server | environment variables (`Section__Key`) + build-time `VITE_*` |
-| Production | Static Web Apps | Container Apps revision | Flexible Server | same, supplied by the operator |
+| Local | Vite dev server on `http://localhost:5173`, dev simulator or a real dev SignalR resource | `dotnet run` on `http://localhost:5180` | dev Azure SQL database, developer's own Entra identity (`az login`) | `.env.local`, `appsettings.Local.json` (both git-ignored) |
+| Dev / Staging | Static Web Apps | Container Apps revision | Azure SQL Database | environment variables (`Section__Key`) + build-time `VITE_*` |
+| Production | Static Web Apps | Container Apps revision | Azure SQL Database | same, supplied by the operator |
 
 Build-time `VITE_*` values are baked per environment, so each environment needs its own build. Backend settings are strongly typed, validated at startup, and the **API refuses to start on a missing or placeholder value** — a deployment misconfiguration fails loudly at start instead of silently at the first request.
 
@@ -580,7 +582,7 @@ All user-visible text is French, chosen client-side from status codes and HTTP s
 | Unit | `tests/UnitTests` (xUnit, NSubstitute); Vitest component/composable tests | business behaviour in isolation |
 | Integration (per side) | `tests/IntegrationTests` with `WebApplicationFactory`, signed test tokens, in-memory repositories and faked ports; Vitest service tests with mocked MSAL/HTTP | the real HTTP pipeline, and client behaviour at the boundary |
 | Contract | `check-contract` + response validation against the contract schemas on both sides | that the two sides cannot drift |
-| Database constraint | opt-in, against a real migrated MySQL 8.4 database (`KLESIA_TEST_DB_CONNECTION`) | checks, collation and case-sensitivity behave as specified |
+| Database constraint | opt-in, against a disposable Azure SQL database published from the DACPAC (`KLESIA_TEST_SQL_CONNECTION`) | checks, collation and case-sensitivity behave as specified |
 | Live wire | optional contract proxy between a running SPA and API | real tokens, real CORS, real SignalR |
 
 Environment-dependent levels are **reported as not run** when prerequisites are missing; they are never assumed to pass. No test is suppressed and no check disabled to make a build green.
@@ -597,7 +599,7 @@ Environment-dependent levels are **reported as not run** when prerequisites are 
 | **Reliability** | No lost demand, no stuck demand, no corrupted state | Commit before notify, single-transaction extraction write, guarded worker, recovery sweep, reload on reconnect | In-process queue durability is bounded by the sweep interval (`OPEN-10`) |
 | **Availability** | A dependency outage degrades, never corrupts | `/health` for readiness, TCP liveness, best-effort notifier, SPA keeps the last list on failure | Scale-to-zero cold start is user-visible |
 | **Scalability** | Horizontal scaling without coordination | Stateless replicas, no session, SignalR outside the container, database as sole state | Unpaginated list grows linearly with a user's demands |
-| **Evolvability** | External dependencies replaceable without touching use cases | One port per external system; adapters isolated in `Infrastructure` | Hosting and engine changes (`DEC-14`, `DEC-15`) already proved this holds |
+| **Evolvability** | External dependencies replaceable without touching use cases | One port per external system; adapters isolated in `Infrastructure` | Engine and hosting (`DEC-14`, `DEC-15`) are confined to `Infrastructure`, the SQL project and the pipeline, so a change there touches no use case |
 | **Observability** | Any user report traceable to a server log | `X-Correlation-Id` end to end, `traceId` equal to it, structured logs | Redaction rules must be respected in every new log statement |
 | **Usability** | Status visible without any manual action | Push signal plus authoritative re-read; explicit list states; French wording from codes | Real-time is best effort; reconnection reload is the safety net |
 
@@ -610,10 +612,10 @@ The authoritative decision register is `klesia_api/docs/specs/SPECIFICATIONS.md`
 | Ref | Decision | Why | Trade-off accepted |
 |---|---|---|---|
 | `DEC-08` | The HTTP contract is canonical and machine-readable | Two independently developed applications need a referee that tooling can check | Every boundary change costs two or three coordinated commits |
-| `DEC-14` | **Azure Database for MySQL 8.4** replaces SQL Server | Required by the customer's DSI | MySQL has no schemas (prefixes instead), DDL is not transactional, PK/default names cannot be set |
-| `DEC-15` | **Azure Container Apps** replaces App Service | Required by the customer's DSI | Containerisation, forwarded-header handling, probe design, and migration ordering become the team's responsibility |
-| `DEC-02` | Dapper + hand-written SQL, **no EF Core** | Explicit SQL, schema owned by the migrator, no hidden mapping-driven DDL | More SQL to write and test by hand |
-| `DEC-06` / `HOST-06` | Passwordless access with one user-assigned managed identity | Removes every stored credential from the system | Local development requires `az login` and an Entra database user; tokens must be refreshed |
+| `DEC-14` | **Azure SQL Database** (SQL Server) — the client's decision | Client decision; native `UNIQUEIDENTIFIER` and `BIT` types, three schemas, every constraint named | Repositories use T-SQL; the schema is state-based (DACPAC), so transitions are computed at publish time and must be reviewed |
+| `DEC-15` | **Azure Container Apps** for the API | Required by the customer's DSI | Containerisation, forwarded-header handling, probe design, and schema-publish ordering become the team's responsibility |
+| `DEC-02` | Dapper + hand-written SQL, **no EF Core** | Explicit SQL, schema owned by the SQL project, no hidden mapping-driven DDL | More SQL to write and test by hand |
+| `DEC-06` / `HOST-06` | Passwordless access with one user-assigned managed identity | Removes every stored credential from the system | One connection string works locally and in Azure; local development requires `az login` (or a Visual Studio sign-in) and an Entra database user created `FROM EXTERNAL PROVIDER` |
 | `DEC-13` | The backend copies the PDF into SharePoint and stores a **permanent** link | The document outlives the request; the browser never uploads to SharePoint; permissions stay where documents live | Access control for documents is outside the API; a failed insert after a copy needs best-effort cleanup |
 | `DEC-16` / `NOT-01` | Azure SignalR **Serverless**, one contentless event, owner-targeted | No real-time data contract to maintain, no trust in pushed data, no broadcast of activity | One extra `GET` per notification |
 | `DEC-17` / `EXT-01` | Extraction runs **after the response**, in-process, with a recovery sweep | Keeps the request fast and avoids introducing a broker before it is justified | Durability is bounded by the sweep; a broker remains the planned escape hatch (`OPEN-10`) |
@@ -631,7 +633,7 @@ The authoritative decision register is `klesia_api/docs/specs/SPECIFICATIONS.md`
 
 ### 14.1 Imposed constraints (not negotiable at this level)
 
-- Azure Database for MySQL Flexible Server 8.4; Azure Container Apps for the API; Azure Static Web Apps for the SPA — all required by the customer's DSI.
+- Azure SQL Database (the client's final decision, `DEC-14`); Azure Container Apps for the API (required by the customer's DSI, `DEC-15`); Azure Static Web Apps for the SPA.
 - No Entity Framework Core, no `DbContext`, no EF migrations.
 - Desktop-only UI; French user-facing text; English code and documentation.
 - Frontend-only on the SPA side: no backend logic, no OCR, no document storage, no polling, no manual refresh control, no editing or deleting.
@@ -643,7 +645,7 @@ The authoritative decision register is `klesia_api/docs/specs/SPECIFICATIONS.md`
 - Single-tenant Entra application; `oid` is unique within the validated tenant.
 - SharePoint is reached with the container app's managed identity holding `Sites.Selected` on one site (`OPEN-11`).
 - Document Intelligence is called with the same managed identity (*Cognitive Services User*) and answers with the JSON of `EXT-04`; if it answers the standard `AnalyzeResult`, the mapping stays inside the Infrastructure adapter (`OPEN-09`).
-- "No `Password` in the connection string" is the only switch enabling Entra-token authentication to MySQL (`DEC-06`).
+- Passwordless database access relies on `Authentication=Active Directory Default` and on the runtime identity existing as a database user created `FROM EXTERNAL PROVIDER` (`DEC-06`, `OPEN-07`).
 - The provisional 10 MB PDF limit is illustrative, not a confirmed business rule (`INT-05`).
 
 ### 14.3 Open items blocking production (not blocking development)
@@ -651,7 +653,7 @@ The authoritative decision register is `klesia_api/docs/specs/SPECIFICATIONS.md`
 | Ref | Open item |
 |---|---|
 | `OPEN-03` | Entra tenant id, API application id, SPA client id, registered redirect URIs |
-| `OPEN-07` | MySQL deployment: server, network access, Entra administrator and database users, `lower_case_table_names`, TLS chain, `aad_auth_only` |
+| `OPEN-07` | Azure SQL Database deployment: server and database name, service tier, region, network access (firewall rules or private endpoint), Entra administrator and database users, whether Entra-only authentication is enabled, TLS (`Encrypt=True`, `TrustServerCertificate=False`) |
 | `OPEN-08` | Container Apps deployment: environment and network, ingress exposure, registry, replicas and probes, body-size limit and timeout, infrastructure-code ownership, Log Analytics, GitHub-to-Azure OIDC |
 | `OPEN-09` | Document Intelligence: model id, endpoint, response envelope, optional fields, PDF limits, quota |
 | `OPEN-10` | Durability of background work: keep the in-process queue or move to a broker behind `IExtractionQueue` |
@@ -666,10 +668,9 @@ Recorded here because they are visible to any agent reading the workspace and mu
 
 | # | Misalignment | Suggested resolution |
 |---|---|---|
-| 1 | `contracts/openapi.yaml` is **v0.4.0** and still describes a staged delivery (`x-implementation-status: sprint-1 / adopted`), while both specifications are **v2.0** and explicitly carry no phasing. The webapp specification's own "Contract alignment" paragraph lists the required amendments. | Amend the contract per that paragraph: drop the staged-delivery language and the `x-implementation-status` values, remove "successful `createDemand`" from the `listDemands` trigger list (`RT-05`), and specify `N-2` as in `BE-04`/`INT-11`. Bump the contract version. |
-| 2 | `check-contract`, `integration-test` and `integration-reviewer` all enforce **Lot 1 / Lot 2** scoping, which the v2.0 specifications removed. | Once item 1 is done, remove the lot-scoping rules from the three assets, or restate them as delivery sequencing that is explicitly *not* an architectural constraint. |
+| 1 | `contracts/openapi.yaml` is **v0.4.0** and still describes a staged delivery (`x-implementation-status: sprint-1 / adopted`), while both specifications explicitly carry no phasing. The webapp specification's own "Contract alignment" paragraph lists the required amendments. | Amend the contract per that paragraph: drop the staged-delivery language and the `x-implementation-status` values, remove "successful `createDemand`" from the `listDemands` trigger list (`RT-05`), and specify `N-2` as in `BE-04`/`INT-11`. Bump the contract version. |
+| 2 | `check-contract`, `integration-test` and `integration-reviewer` all enforce **Lot 1 / Lot 2** scoping, which the specifications removed. | Once item 1 is done, remove the lot-scoping rules from the three assets, or restate them as delivery sequencing that is explicitly *not* an architectural constraint. |
 | 3 | Source-of-truth wording differs: the root `CLAUDE.md` calls the contract the single source of truth; the API specification (`DEC-08`) makes itself authoritative with the contract as its machine-readable mirror; the webapp specification says it prevails until the contract is amended. | Adopt `GOV-01` (§1.4) as the single statement in all three places: the owning specification changes first, the contract changes in the same commit, and any disagreement is a defect. |
-| 4 | The original project brief describes the API as *App Service + SQL Database* and the SPA as an *Azure Webapp*. | Superseded by `DEC-14` and `DEC-15`; this document follows the repository. Worth correcting in any brief still circulating. |
 
 ---
 
@@ -680,13 +681,12 @@ Recorded here because they are visible to any agent reading the workspace and mu
 | Kind of change | Required sequence |
 |---|---|
 | **HTTP boundary** (route, schema, status, header, auth rule, CORS) | owning specification → `contracts/openapi.yaml` → backend → `src/models/demand.ts` → frontend consumption → backend tests → frontend tests → `check-contract` → `integration-reviewer` |
-| **Database schema** | API specification §3 → a **new** numbered migration (never edit an applied one, one DDL object per script) → repositories → tests → confirm backward compatibility with the previous revision (`HOST-12`) |
+| **Database schema** | API specification §3 → edit the table or schema definition in the SQL project (never DDL in the API) → build the DACPAC → **review the generated publish script**, data-loss blocking on → repositories → tests → confirm backward compatibility with the previous revision (`HOST-12`) |
 | **New external dependency** | this document (§4, §5, §13) → a port in `Application` → an adapter in `Infrastructure` → configuration keys and startup validation → a fake for tests → identity and role assignment |
 | **Hosting or infrastructure** | this document (§10) + API specification §6.3 → `Dockerfile`/pipeline/Bicep → `OPEN-08` items confirmed with the DSI before production |
 | **UI behaviour with no boundary impact** | webapp specification → components/composables → acceptance tests; no contract change |
-| **A principle in §3** | this document first, with the rationale and the superseded rule named explicitly |
+| **A principle in §3** | this document first, with the rationale |
 
-**Supersession style.** Decisions are never silently rewritten. A new decision names the one it replaces and why, exactly as `DEC-15` supersedes `DEC-07` and `DEC-14` replaces the SQL Server baseline. The superseded entry stays readable so that the history of the architecture survives.
 
 ### 15.2 What is cheap and what is expensive to change
 
@@ -730,7 +730,7 @@ Architectural drift is detected mechanically, not by memory:
 | Frontend behaviour, UI, configuration, tests, deployment | `klesia_webapp/docs/specs/SPECIFICATIONS.md` |
 | Workspace rules for agents | `CLAUDE.md` (root), `klesia_api/CLAUDE.md`, `klesia_webapp/CLAUDE.md` |
 | Cross-application governance | `.claude/skills/check-contract`, `.claude/skills/integration-test`, `.claude/agents/integration-reviewer` |
-| Database schema | `klesia_api/database/Klesia.Database/Migrations`, `Seeds` |
+| Database schema | `klesia_api/database/Klesia.Database` (`Schemas/`, `Tables/`, `Scripts/`, `PostDeployment.sql`) |
 | Local development | `klesia_api/docs/local-development.md`, `klesia_webapp/tools/dev-simulator/` |
 | Deployment guides | `klesia_api/docs/deployment-container-apps.md`, `klesia_webapp/infra/azure-signalr/` |
 | Visual references | `klesia_webapp/maquettes/` |

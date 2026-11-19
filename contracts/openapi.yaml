@@ -7,7 +7,7 @@ info:
   description: |
     **Single source of truth** for the HTTP boundary between the Vue SPA
     (`klesia-webapp`, Azure Static Web Apps) and the .NET back-office API
-    (`klesia-api`, Azure Container Apps + Azure Database for MySQL).
+    (`klesia-api`, Azure Container Apps + Azure SQL Database).
 
     Derived from `klesia_api/docs/specs/SPECIFICATIONS.md` (v1.6) and
     `klesia_webapp/docs/specs/SPECIFICATIONS.md` (v1.4). Any change to a route,
@@ -161,7 +161,7 @@ paths:
       summary: List the signed-in user's demands
       description: |
         Returns the identity of the signed-in user and **only their own** demands
-        (`Demand.UserId` = the matched `sec_User`), most recent first. An empty list is a valid `200`.
+        (`Demand.UserId` = the matched `sec.User`), most recent first. An empty list is a valid `200`.
         Takes no parameter: any `user_id` sent in the query or a header is ignored.
 
         The frontend calls it once after authentication and then only on: successful reconnection,
@@ -399,7 +399,7 @@ components:
     DemandStatus:
       type: string
       description: |
-        Processing status (`ref_Status.Code`). `pending` = "En cours", `ok` = "Traitée",
+        Processing status (`ref.Status.Code`). `pending` = "En cours", `ok` = "Traitée",
         `fail` = "En anomalie" in the French UI. The set is closed on the API side; adding a value is
         a contract change. The frontend nevertheless renders an unknown value as "Statut inconnu".
       enum: [pending, ok, fail]
@@ -441,11 +441,11 @@ components:
           type: string
           format: uuid
           description: |
-            The user's Entra `oid` (`sec_User.UserUniqueId`, lower-case canonical form), **not** the internal database `Id`. Informational
+            The user's Entra `oid` (`sec.User.UserUniqueId`), **not** the internal database `Id`. Informational
             only: the frontend never uses it as proof of identity.
         user_name:
           type: string
-          description: Full name from the database (`sec_User.Name`).
+          description: Full name from the database (`sec.User.Name`).
         demands:
           type: array
           description: The user's own demands, `demand_id` descending. May be empty.
