@@ -1,7 +1,7 @@
 # KLESIA — Software Architecture Plan
 
 **Document ID:** KLESIA-ARCH
-**Version:** 1.1
+**Version:** 1.2 (hosting on Azure App Service, documents in private Azure Blob Storage served through the API)
 **Date:** 2026-11-19
 **Status:** Baseline — agreed structure, open items tracked in §14
 **Language:** English (all user-facing product text is French, §3 AP-13)
@@ -50,7 +50,7 @@ When sources disagree, resolve in this order:
 4. **This document** for cross-application structure, responsibility boundaries and rationale.
 5. **Mockups**, then existing repository conventions.
 
-**Governance rule (GOV-01).** A disagreement between a specification and the contract is a **defect, not a choice**. It is resolved by changing *both* documents in the same change, starting with the owning specification (API spec `DEC-08`), and never by making code match whichever document is convenient. One such disagreement is open today; see §14.4.
+**Governance rule (GOV-01).** A disagreement between a specification and the contract is a **defect, not a choice**. It is resolved by changing *both* documents in the same change, starting with the owning specification (API spec `DEC-08`), and never by making code match whichever document is convenient. No such disagreement is known today (§14.4).
 
 ---
 
@@ -75,7 +75,7 @@ sequenceDiagram
     actor U as User
     participant FE as klesia-webapp
     participant API as klesia-api (request)
-    participant SP as SharePoint
+    participant ST as Azure Blob Storage
     participant DB as Azure SQL Database
     participant SR as Azure SignalR
     participant W as klesia-api (worker)
@@ -83,7 +83,7 @@ sequenceDiagram
 
     U->>FE: Submits GK number + PDF
     FE->>API: POST /api/v1/demands (multipart, Bearer access token)
-    API->>SP: Copy the PDF, obtain a permanent HTTPS link
+    API->>ST: Copy the PDF into the private container
     API->>DB: INSERT Demand (status = pending)
     API-->>SR: N-1 demandUpdated (owner only, no payload)
     API-->>FE: 201 Created
@@ -91,7 +91,7 @@ sequenceDiagram
     SR-->>FE: demandUpdated
     FE->>API: GET /api/v1/demands
     Note over FE: Demand appears as "En cours"
-    W->>SP: Read the PDF back
+    W->>ST: Read the PDF back
     W->>DI: Analyse with the custom model
     DI-->>W: Structured JSON (EXT-04)
     W->>DB: Store extraction + final status (ok or fail), one transaction
@@ -99,13 +99,19 @@ sequenceDiagram
     SR-->>FE: demandUpdated
     FE->>API: GET /api/v1/demands
     Note over FE: Label becomes "Traitée" or "En anomalie"
+    U->>FE: Clicks the GK number
+    FE->>API: GET /api/v1/demands/{id}/bae (Bearer access token)
+    API->>ST: Open the blob (the owner's demand only)
+    API-->>FE: PDF stream (private, no-store)
+    Note over FE: Object URL shown in a new tab
 ```
 
-Three architectural properties are visible here and are load-bearing for the whole system:
+Four architectural properties are visible here and are load-bearing for the whole system:
 
 - **The notification is a signal, never data.** `demandUpdated` carries no arguments; the frontend re-reads authoritative state from the API (`AP-09`).
 - **The write path never informs the read path directly.** A successful `POST` triggers *no* list reload; only notifications do (`RT-05`).
 - **Long work leaves the request.** The extraction runs after the response, in the background, with the database as the only record of progress.
+- **Documents are private and travel through the API.** The browser never contacts the storage: the API checks that the demand is the caller's and streams the file (`DEC-24`).
 
 ### 2.3 Responsibility split
 
@@ -114,7 +120,8 @@ Three architectural properties are visible here and are load-bearing for the who
 | Business rules, workflow, status transitions | `klesia-api` | the frontend |
 | Authentication of the user | Microsoft Entra ID, via MSAL in the browser | custom code on either side |
 | Authorisation (who may see what) | `klesia-api`, server-side, from the token | the frontend (it is presentation only) |
-| Document storage and access control | SharePoint | the database, the API disk, the browser |
+| Document storage | Azure Blob Storage, one private container | the database, the API disk, the browser |
+| Access control to a document | `klesia-api`: owner check, then stream | the storage account, the frontend |
 | Content extraction (OCR) | Azure Document Intelligence | the API's own code, the frontend |
 | Real-time delivery | Azure SignalR Service (Serverless) | custom WebSocket code, polling |
 | Schema ownership | the SQL database project (`database/Klesia.Database`) | the API at runtime, an ORM |
@@ -128,16 +135,16 @@ These are the rules that must survive every future change. They are the standard
 
 | ID | Principle | Consequence |
 |---|---|---|
-| **AP-01** | **Contract first.** No HTTP behaviour changes before `contracts/openapi.yaml` changes. | A behaviour diff without a contract diff is a defect (root `CLAUDE.md`, GOV-01). |
+| **AP-01** | **Specification and contract first.** No HTTP behaviour changes before the owning specification and `contracts/openapi.yaml` change, in the same change. | A behaviour diff without a contract diff is a defect (root `CLAUDE.md`, GOV-01). |
 | **AP-02** | **Business logic lives in the backend.** | The frontend validates for usability, never for correctness; the backend re-validates everything (`GK` format, PDF content, size, ownership). |
 | **AP-03** | **Dependencies point inward.** `WebApi → Infrastructure → Application → Domain`. | Domain knows nothing of HTTP, SQL Server, Azure or SignalR. |
 | **AP-04** | **One client layer.** The SPA reaches the API only through its service layer; visual components never call `fetch`. | Transport, auth and error mapping exist once (`demandService.ts`, `realtimeService.ts`). |
 | **AP-05** | **Identity comes from the token.** The user is the `oid` of a validated access token. | No `user_id` is ever accepted in a path, query, header or body (`DEC-20`). |
 | **AP-06** | **Fail closed, disclose nothing.** | Unknown user and disabled user return an identical `403`; bodies carry no stack trace, SQL, token, link or other user's data. |
-| **AP-07** | **Configuration over code, and no secrets.** | Tenant, origins, endpoints, limits are configuration validated at startup; the API holds no secret at all (`HOST-07`). |
-| **AP-08** | **Stateless replicas; the database is the only authority.** | Any replica serves any request; nothing correctness-bearing lives in memory or on the container disk (`HOST-08`). |
+| **AP-07** | **Configuration over code, and no secrets.** | Tenant, origins, endpoints, limits are configuration validated at startup; the API holds no secret at all (`HOST-05`). |
+| **AP-08** | **Stateless instances; the database is the only authority.** | Any instance serves any request; nothing correctness-bearing lives in memory or on the instance disk (`HOST-06`). |
 | **AP-09** | **Push signals, it does not carry.** | Notifications have no payload and are never trusted or rendered; the client re-reads state (`RT-03`, `NOT-04`). |
-| **AP-10** | **Passwordless, managed identity everywhere.** | Azure SQL Database, SharePoint/Graph, Document Intelligence and SignalR are all reached with one user-assigned managed identity (`DEC-06`, `HOST-06`). |
+| **AP-10** | **Passwordless, managed identity everywhere.** | Azure SQL Database, Blob Storage, Document Intelligence and SignalR are all reached with one user-assigned managed identity (`DEC-06`, `HOST-04`). |
 | **AP-11** | **One owner per responsibility.** | No parallel implementation of auth, HTTP access, the domain model or the reload trigger on either side. |
 | **AP-12** | **The SQL database project owns the schema.** | No EF Core, no `DbContext`, no runtime DDL; the schema is declared in `database/Klesia.Database` and published as a DACPAC with data-loss blocking on (`DEC-02`, `DB-11`, API specification §3.5). |
 | **AP-13** | **French for users, English for engineers.** | All UI text is French and chosen client-side from status codes; all code, identifiers, tests and documents are English. |
@@ -155,12 +162,12 @@ flowchart TB
 
     subgraph KLESIA["KLESIA system"]
         FE["klesia-webapp<br/>Vue 3 SPA<br/>Azure Static Web Apps"]
-        API["klesia-api<br/>ASP.NET Core .NET 10<br/>Azure Container Apps"]
+        API["klesia-api<br/>ASP.NET Core .NET 10<br/>Azure App Service"]
         DB[("Azure SQL Database<br/>SQL Server engine")]
     end
 
     ENTRA["Microsoft Entra ID"]
-    SP["SharePoint<br/>document library"]
+    ST["Azure Blob Storage<br/>private container"]
     DI["Azure AI<br/>Document Intelligence"]
     SR["Azure SignalR Service<br/>Serverless, hub: demands"]
 
@@ -168,10 +175,9 @@ flowchart TB
     FE -->|"sign-in, PKCE"| ENTRA
     FE -->|"HTTPS + Bearer access token"| API
     FE -->|"negotiate, then WSS"| SR
-    FE -->|"opens bae_link with the user's own SSO session"| SP
     API -->|"validate token metadata"| ENTRA
     API -->|"Dapper, parameterised SQL"| DB
-    API -->|"Graph: copy and read back the PDF"| SP
+    API -->|"copy, read back and stream the PDF (managed identity)"| ST
     API -->|"analyse the PDF (background)"| DI
     API -->|"publish demandUpdated to one oid"| SR
     SR -.->|"demandUpdated"| FE
@@ -179,12 +185,13 @@ flowchart TB
 
 ### 4.2 The complete system surface
 
-The entire externally observable surface of KLESIA is **four HTTP operations and one real-time event**. Anything else is an architectural change.
+The entire externally observable surface of KLESIA is **five HTTP operations and one real-time event**. Anything else is an architectural change.
 
 | Surface | Purpose | Auth |
 |---|---|---|
-| `GET /health` | Container Apps startup and readiness probe | anonymous |
+| `GET /health` | Azure App Service Health check | anonymous |
 | `GET /api/v1/demands` | The signed-in user's identity and own demands, newest first, unpaginated | Entra access token |
+| `GET /api/v1/demands/{demand_id}/bae` | Stream the BAE PDF of one of the caller's own demands (`bae_link`) | Entra access token |
 | `POST /api/v1/demands` | Create one demand from a GK number and a PDF | Entra access token |
 | `POST /api/v1/notifications/negotiate` | SignalR negotiation for the `demands` hub | Entra access token |
 | `demandUpdated` (SignalR, not HTTP) | "Your demands changed" — no arguments, owner only | SignalR connection token |
@@ -192,16 +199,17 @@ The entire externally observable surface of KLESIA is **four HTTP operations and
 ### 4.3 Trust boundaries
 
 ```text
-  [ browser: untrusted ]  --(1)--  [ Container Apps ingress: TLS terminates ]  --(2)--  [ API process ]
+  [ browser: untrusted ]  --(1)--  [ App Service front end: TLS terminates ]  --(2)--  [ API process ]
                                                                                            |
                                                             (3) managed identity, no secret |
                                                                                            v
-                                                        [ Azure SQL ] [ SharePoint ] [ Doc Intelligence ] [ SignalR ]
+                                                    [ Azure SQL ] [ Blob Storage ] [ Doc Intelligence ] [ SignalR ]
 ```
 
 1. Everything from the browser is untrusted input, including the notification payload, the GK number, the file and its declared MIME type.
-2. TLS ends at the ingress; the API speaks plain HTTP on port 8080 and derives the client protocol and address from `X-Forwarded-*` only because the ingress is the sole network entry point (`HOST-03`, `HOST-04`).
+2. TLS ends at the App Service front end (HTTPS Only, minimum TLS 1.2); the API sees the original scheme through the platform's forwarded headers and trusts them only from the platform's own front end (`HOST-02`).
 3. Outbound access is identity-based, never key-based or password-based.
+4. The storage account is private, with no CORS and no SAS: only the API reads it, so a document is released only after the owner check (`DEC-24`).
 
 ### 4.4 What deliberately does not exist
 
@@ -232,14 +240,14 @@ Recording the absent components is as architecturally meaningful as recording th
 | Backend data access | **Dapper** + `Microsoft.Data.SqlClient` | `DEC-02`, `DEC-14`; EF Core forbidden |
 | Backend auth | `Microsoft.AspNetCore.Authentication.JwtBearer`, v2.0 access tokens | `AUTH-01` |
 | Backend tests | xUnit, FluentAssertions, NSubstitute, `WebApplicationFactory` | signed test tokens, in-memory repositories |
-| Backend hosting | **Azure Container Apps**, container on HTTP 8080, non-root | `DEC-15` |
+| Backend hosting | **Azure App Service** (Always On, HTTPS Only, Health check on `/health`) | `DEC-07`, `HOST-01` to `HOST-04` |
 | Database | **Azure SQL Database** (SQL Server engine) | `DEC-14` |
 | Schema tooling | **SQL database project** (`Microsoft.Build.Sql`, `Klesia.Database.sqlproj`) built into a **DACPAC** and published with `SqlPackage`; idempotent post-deployment seeds | `DEC-02`, `DEC-14`, `DB-11`, API spec §3.5 |
 | Identity provider | Microsoft Entra ID, single tenant | `OPEN-03` supplies the values |
-| Documents | SharePoint document library via Microsoft Graph, `Sites.Selected` | `DEC-13`, `OPEN-11` |
+| Documents | **Azure Blob Storage**, one private container, read and written by the API only (`Azure.Storage.Blobs`, managed identity with *Storage Blob Data Contributor*) | `DEC-13`, `DEC-24`, `OPEN-11`, `OPEN-12` |
 | Extraction | Azure AI Document Intelligence, custom BAE model | `DEC-18`, `OPEN-09` |
 | Real-time service | Azure SignalR Service, **Serverless** mode, hub `demands` | `DEC-16` |
-| CI/CD | GitHub Actions, OIDC federated credential, SHA-tagged images | `HOST-12`, `OPEN-08i` |
+| CI/CD | GitHub Actions, OIDC federated credential, `SqlPackage` publish, App Service deployment | `HOST-11`, `OPEN-08i` |
 
 **Version discipline.** Framework and package versions are pinned where the repository already pins them (`global.json`, `Directory.Packages.props`, `package.json` + `.nvmrc`). Versions are never guessed in documentation; they are read from those files at implementation time.
 
@@ -255,14 +263,14 @@ WebApi           transport + composition root only
   Cors/  Logging/  Contracts/ (snake_case request and response records)
   Controllers/ (DemandsController, NotificationsController)   Program.cs
         |
-Infrastructure   adapters: Persistence (Dapper), Documents (SharePoint/Graph),
+Infrastructure   adapters: Persistence (Dapper), Documents (Azure Blob Storage),
                  Extraction (Document Intelligence, Channel queue, hosted workers),
                  Notifications (Azure SignalR), Options, DependencyInjection
         |
 Application      use cases + ports: DemandService, DemandExtractionService,
                  ExtractionSweepService, validators, DTOs
                  Abstractions/: IUserRepository, IDemandRepository,
-                 IDemandExtractionRepository, IBaeDocumentStore, IBaeLinkResolver,
+                 IDemandExtractionRepository, IBaeDocumentStore,
                  IDocumentExtractor, IExtractionQueue, INotifier
         |
 Domain           entities and value objects only: ApplicationUser, Demand,
@@ -272,12 +280,12 @@ Domain           entities and value objects only: ApplicationUser, Demand,
 **Architectural rules.**
 
 - Controllers translate HTTP and nothing else: no business rule, no SQL, no Azure SDK type.
-- Every external system is reached through a port declared in `Application` and implemented in `Infrastructure`. Callers never see a `HubConnection`, a `GraphServiceClient`, a `SqlConnection` or a Document Intelligence type.
+- Every external system is reached through a port declared in `Application` and implemented in `Infrastructure`. Callers never see a `HubConnection`, a `BlobServiceClient`, a `SqlConnection` or a Document Intelligence type.
 - **Token validation is separated from business authorisation on purpose**: the JWT middleware proves *who* the caller is (`401`), the authorisation policy proves *what* the token permits (`403`), and the allowlist check lives in `DemandService` because it is a business rule about an application user, not a transport concern (`AUTH-IMPL`).
-- The background worker is an `Infrastructure` hosted service driving an `Application` use case. It has no caller, no token and no HTTP context; it takes its inputs from the database and SharePoint only (`AUTH-02`).
+- The background worker is an `Infrastructure` hosted service driving an `Application` use case. It has no caller, no token and no HTTP context; it takes its inputs from the database and the blob storage only (`AUTH-02`).
 - JSON naming is declared explicitly on the `WebApi` contract records. Database casing never leaks into JSON and JSON casing never dictates SQL (`DEC-21`).
 
-**Why this structure.** The two volatile areas of KLESIA are its external dependencies (SharePoint, Document Intelligence, SignalR, and plausibly the queue) and its hosting. Isolating each behind a port means `OPEN-09`, `OPEN-10` and `OPEN-11` can be resolved later by replacing one adapter, with no change to use cases, contracts or tests of the inner layers.
+**Why this structure.** The two volatile areas of KLESIA are its external dependencies (Blob Storage, Document Intelligence, SignalR, and plausibly the queue) and its hosting. Isolating each behind a port means `OPEN-09`, `OPEN-10` and `OPEN-11` can be resolved later by replacing one adapter, with no change to use cases, contracts or tests of the inner layers.
 
 ### 6.2 `klesia-webapp` — layered SPA
 
@@ -302,7 +310,7 @@ utils/        GK number and PDF validation, constants, design tokens
 
 ### 6.3 Database project — `database/Klesia.Database`
 
-A standalone **SQL database project** (SDK-style, `Microsoft.Build.Sql`, targeting Azure SQL Database) whose `Schemas/` and `Tables/` files declare the **desired state** of the schema. It is built into a DACPAC and published with `SqlPackage` by the pipeline, **separately from the API** (`HOST-12`); `SqlPackage` computes the difference against the target database and applies it. The `Scripts/` seed files are pulled in by a single `PostDeployment.sql` and run after **every** publish, so they must be idempotent: reference data is merged on its stable `Code`, and the user seed is insert-only so that a user deactivated by an administrator is never reactivated (`DEC-05`). An intentionally empty `database/Directory.Build.props` isolates the project from the .NET build settings.
+A standalone **SQL database project** (SDK-style, `Microsoft.Build.Sql`, targeting Azure SQL Database) whose `Schemas/` and `Tables/` files declare the **desired state** of the schema. It is built into a DACPAC and published with `SqlPackage` by the pipeline, **separately from the API** (`HOST-11`); `SqlPackage` computes the difference against the target database and applies it. The `Scripts/` seed files are pulled in by a single `PostDeployment.sql` and run after **every** publish, so they must be idempotent: reference data is merged on its stable `Code`, and the user seed is insert-only so that a user deactivated by an administrator is never reactivated (`DEC-05`). An intentionally empty `database/Directory.Build.props` isolates the project from the .NET build settings.
 
 **Why a separate project.** The runtime identity holds data privileges only — no DDL (`§6.2` of the API specification). Schema change is a deployment-time act performed by a more privileged principal, which is what keeps a compromised API from altering the schema.
 
@@ -355,9 +363,9 @@ Three properties matter architecturally: the order is fixed; an infrastructure f
 
 **Error model.** Every non-2xx response from an application route is `application/problem+json` (RFC 9457). The **HTTP status is the primary signal**; the SPA selects its own French wording from the status and, for `400`/`422`, from the *keys* of `errors` — never from server text. This is what lets the backend evolve its messages without touching the frontend, and keeps server internals out of the UI.
 
-Responses produced by the ingress rather than the API (`502`, `503`, `504`, a `413` hit at the ingress first) may be non-JSON and carry no correlation header. The SPA therefore treats them generically and offers "Réessayer".
+Responses produced by the App Service front end rather than the API (`502`, `503`, `504`, a `413` hit at the platform first) may be non-JSON and carry no correlation header. The SPA therefore treats them generically and offers "Réessayer".
 
-**CORS.** Exactly one CORS policy exists, and it belongs to the API; the Container Apps ingress policy stays **disabled** so two policies can never disagree (`HOST-03`). Exact origins only, never `*`; no credentials; `X-Correlation-Id` exposed; the SignalR client's `X-Requested-With` and `X-SignalR-User-Agent` must be allowed or the negotiate preflight fails.
+**CORS.** Exactly one CORS policy exists, and it belongs to the API (`Cors:AllowedOrigins`), and no second policy is configured on the platform, so two policies can never disagree. Exact origins only, never `*`; no credentials; `X-Correlation-Id` exposed; the SignalR client's `X-Requested-With` and `X-SignalR-User-Agent` must be allowed or the negotiate preflight fails.
 
 **Correlation.** Every response carries `X-Correlation-Id`, and `ProblemDetails.traceId` equals it — one identifier joining a user report, a browser trace and a server log.
 
@@ -389,9 +397,9 @@ A notification may legitimately arrive **before** the `POST` response. The desig
 
 ### 7.5 Document integration
 
-The browser never uploads to SharePoint and never holds a Graph token. The API copies the PDF into the configured library with a **backend-generated file name**, so repeated submissions of the same GK number cannot overwrite each other, and stores the permanent HTTPS link in `Demand.BaeLink`.
+The browser never uploads to the storage and never contacts it. The API copies the PDF into one **private** Azure Blob Storage container under a **backend-generated blob name** (`{oid}/{unique id}.pdf`, create-only), so repeated submissions of the same GK number cannot overwrite each other, and stores the blob URL, without SAS, in `Demand.BaeLink`, which is **internal** and never returned.
 
-The link is **not signed, not time-limited and not anonymous**: the browser opens it with the user's own Entra SSO session, and **SharePoint permissions are the access gate**. The API attaches no bearer token to it, never builds or alters it, and validates that what it returns is an absolute HTTPS URL. `IBaeLinkResolver` stays a pass-through; making links time-limited would be a separate architectural decision (`OPEN-05`).
+What the client receives is `bae_link`, the stable API path `/api/v1/demands/{demand_id}/bae`. Opening it is an ordinary authenticated call: the SPA fetches it with the Bearer token and shows the result through an object URL, because a browser navigation cannot carry the header. The API selects the demand by id **and** owner in one query, answers the same `404` for a missing demand and for another user's demand, and **streams** the blob. The API is the only gate: the container allows no anonymous access and shared-key access is disabled (`DEC-24`). A design with user-delegation SAS links was examined and withdrawn, because a SAS is a bearer token that cannot be tied to a user. The cost is that every PDF travels through the API instances (`OPEN-12d`).
 
 ### 7.6 Local integration without a backend
 
@@ -406,7 +414,7 @@ The frontend's dev simulator implements the *same* contract over the *same* prot
 | Data | System of record | Exposed to the browser |
 |---|---|---|
 | Users, roles, statuses, demands, extracted information and formulas | Azure SQL Database | only the four fields of a `Demand`, plus `user_id`/`user_name` |
-| BAE PDF documents | SharePoint document library | as a permanent HTTPS link, opened under the user's own SSO session |
+| BAE PDF documents | Azure Blob Storage, private container | only through the API path `bae_link`, streamed to the owner |
 | User identity, authentication | Microsoft Entra ID | as tokens held by MSAL |
 | Extraction results in flight | transient, in the worker | never |
 | Real-time events | none — SignalR stores nothing | a contentless signal |
@@ -447,12 +455,13 @@ Conflating the first two would either break SignalR targeting or leak an interna
 
 | Flow | Path |
 |---|---|
-| Read | token → `oid` → `sec.User` allowlist → `Demand` where `UserId` = own id → DTO → JSON |
-| Write | multipart → validate → SharePoint copy → `INSERT Demand(pending)` → commit → `N-1` → enqueue id |
-| Extract | queue id → re-read status/link/owner → SharePoint stream → Document Intelligence → validate → `INSERT` extraction + `UPDATE` status in **one transaction** → `N-2` |
+| Read | token → `oid` → `sec.User` allowlist → `Demand` where `UserId` = own id → DTO (`bae_link` built from `Demand.Id`) → JSON |
+| Write | multipart → validate → blob copy → `INSERT Demand(pending)` → commit → `N-1` → enqueue id |
+| Extract | queue id → re-read status/link/owner → blob stream → Document Intelligence → validate → `INSERT` extraction + `UPDATE` status in **one transaction** → `N-2` |
+| Document | `GET .../{demand_id}/bae` → token → allowlist → `Demand` where `Id` = requested **and** `UserId` = own id (one query, else `404`) → blob stream to the response |
 | Recover | sweep finds demands left `pending` beyond `Extraction:StaleAfterMinutes` → re-enqueue |
 
-The extraction write is one transaction and the worker proceeds only if the demand is still `pending` **and** has no `DemandInformation`, so a duplicated hand-over (replica restart plus sweep) is idempotent in effect rather than by lock.
+The extraction write is one transaction and the worker proceeds only if the demand is still `pending` **and** has no `DemandInformation`, so a duplicated hand-over (instance restart plus sweep) is idempotent in effect rather than by lock.
 
 ---
 
@@ -473,9 +482,9 @@ The extraction write is one transaction and the worker proceeds only if the dema
 
 ### 9.3 Secrets
 
-**The API has no secret.** Database access is passwordless (`Authentication=Active Directory Default`), Graph, Document Intelligence and SignalR use the same user-assigned managed identity, and Entra metadata is public. The SPA has no secret either: every `VITE_*` value is public by construction and baked into the bundle. Consequently there is no key rotation, the database connection string carries no secret, and there is nothing to leak in an image, a repository or a log.
+**The API has no secret.** Database access is passwordless (`Authentication=Active Directory Default`), Blob Storage, Document Intelligence and SignalR use the same user-assigned managed identity, and Entra metadata is public. The SPA has no secret either: every `VITE_*` value is public by construction and baked into the bundle. Consequently there is no key rotation, the database connection string carries no secret, and there is nothing to leak in an image, a repository or a log.
 
-If a secret ever becomes unavoidable it is a Container Apps secret or a Key Vault reference resolved through the managed identity — never in the image, the repository, a Bicep default or a log (`HOST-07`).
+If a secret ever becomes unavoidable it is a Key Vault reference in an application setting, resolved through the managed identity — never in the repository, a Bicep default or a log (`HOST-05`).
 
 ### 9.4 Browser-side protections
 
@@ -489,7 +498,7 @@ Never logged, persisted client-side or placed in a URL: tokens, GK numbers, `bae
 
 ### 9.6 Defence in depth on the upload path
 
-A PDF is checked at four independent points: the SPA (type and size, from runtime configuration), the ingress (body limit), the API (`multipart` shape, real `%PDF-` content, `Upload:MaxPdfSizeMb`), and SharePoint (library permissions). The limits must be aligned deliberately — see `INT-05` and `OPEN-08f`.
+A PDF is checked at four independent points: the SPA (type and size, from runtime configuration), the App Service host (request-size limits), the API (`multipart` shape, real `%PDF-` content, `Upload:MaxPdfSizeMb`), and the storage (private container, no anonymous access, shared-key access disabled). The limits must be aligned deliberately — see `INT-05` and `OPEN-08f`.
 
 ---
 
@@ -499,32 +508,33 @@ A PDF is checked at four independent points: the SPA (type and size, from runtim
 
 ```text
 Browser ──HTTPS──> Azure Static Web Apps (klesia-webapp: dist/, headers, SPA fallback)
-Browser ──HTTPS──> Container Apps ingress (TLS ends here) ──HTTP:8080──> klesia-api replicas
+Browser ──HTTPS──> Azure App Service (TLS ends at the platform front end) ──> klesia-api instances
 Browser ──WSS────> Azure SignalR Service
-Browser ──HTTPS──> SharePoint (user's own SSO session)
 
 klesia-api ──TLS:1433──> Azure SQL Database
-klesia-api ──HTTPS─────> Microsoft Graph (SharePoint), Document Intelligence, Azure SignalR
+klesia-api ──HTTPS─────> Azure Blob Storage (private), Document Intelligence, Azure SignalR
            all outbound calls authenticated by one user-assigned managed identity
+(the browser never contacts the storage account)
 ```
 
 ### 10.2 Runtime characteristics
 
-- **Image.** Multi-stage `Dockerfile` at the API repository root; the final image holds only the published API — no database project or DACPAC, tests, docs, `.claude/`, local settings or `.git`. Base images pinned; deployed images tagged with the **commit SHA**, never `latest`.
-- **Process.** Plain HTTP on 8080, non-root user, no certificate and no Kestrel TLS.
-- **Probes.** Startup and readiness use `GET /health`; **liveness is a TCP probe**, deliberately — `/health` reports `503` when the database is down, and restarting replicas does not repair a database outage. No route is added for probes.
-- **Scaling.** Stateless replicas, 0..N. Scale-to-zero makes the first request slow (token acquisition plus a TLS connection to Azure SQL Database); the SPA's error banner and "Réessayer" cover it, and an operator may keep one replica warm. A minimum of one also avoids scaling in a replica mid-extraction (`OPEN-08e`, `OPEN-10`).
-- **Shutdown.** Clean SIGTERM handling drains in-flight requests and cancels running extractions, which the recovery sweep later re-queues.
-- **Logs.** Console only; Log Analytics collects them.
+- **Plan and Always On.** A plan that supports Always On, enabled in production: the extraction runs in the API process after the response, and an idle app unloaded by the platform would stop it (`HOST-01`, `OPEN-08a`, `OPEN-08e`).
+- **HTTPS.** HTTPS Only and minimum TLS 1.2. TLS ends before the app, which sees the original scheme through the platform's forwarded headers and must not loop on HTTPS redirection (`HOST-02`).
+- **Health check.** The App Service Health check targets `GET /health`. Because it reports `503` when the database is down, a long database outage makes every instance fail the check; the platform's reaction (removal from rotation, replacement) and its thresholds are confirmed with the DSI (`HOST-03`, `OPEN-08d`). No route is added for it.
+- **Scaling.** Stateless instances, scale-out allowed (`HOST-06`). With several instances the background extraction runs in whichever instance accepted the request, and the recovery sweep re-queues a demand left behind (`OPEN-08d`, `OPEN-10`). A recycled or scaled-in instance stops cleanly and cancels running extractions (`HOST-08`).
+- **PDFs through the instances.** PDFs travel through the instances in both directions (upload, streamed download); the request limits and the platform timeout must fit `Upload:MaxPdfSizeMb` (`HOST-07`, `OPEN-08f`, `OPEN-12d`).
+- **Logs.** Structured console logs plus the platform's diagnostic logging (`HOST-09`, `OPEN-08h`).
 
 ### 10.3 Pipeline
 
 ```text
-build + test  ->  build image, push (SHA tag)  ->  publish the DACPAC with SqlPackage (deployment principal)
-              ->  deploy new revision  ->  smoke test GET /health  ->  previous revision kept for rollback
+build + test  ->  publish the API  ->  publish the DACPAC with SqlPackage (deployment principal)
+              ->  deploy to App Service (staging slot first when the plan has slots)
+              ->  smoke test GET /health  ->  previous version kept for rollback
 ```
 
-**The ordering constraint is architectural:** the SQL project is published *before* the new revision, and the previous revision keeps serving during and after a rollback. Therefore **every schema change must be backward compatible with the previous API version** — add first, remove in a later release — and the generated publish script is reviewed with data-loss blocking left on. The project is never published at API startup, and the runtime identity has no DDL rights.
+**The ordering constraint is architectural:** the SQL project is published *before* the new version, and the previous version keeps serving during and after a rollback or a slot swap. Therefore **every schema change must be backward compatible with the previous API version** — add first, remove in a later release — and the generated publish script is reviewed with data-loss blocking left on. The project is never published at API startup, and the runtime identity has no DDL rights.
 
 GitHub Actions authenticates to Azure with an OpenID Connect federated credential; no deployment secret is stored.
 
@@ -533,12 +543,12 @@ GitHub Actions authenticates to Azure with an OpenID Connect federated credentia
 | Environment | Frontend | API | Database | Configuration source |
 |---|---|---|---|---|
 | Local | Vite dev server on `http://localhost:5173`, dev simulator or a real dev SignalR resource | `dotnet run` on `http://localhost:5180` | dev Azure SQL database, developer's own Entra identity (`az login`) | `.env.local`, `appsettings.Local.json` (both git-ignored) |
-| Dev / Staging | Static Web Apps | Container Apps revision | Azure SQL Database | environment variables (`Section__Key`) + build-time `VITE_*` |
-| Production | Static Web Apps | Container Apps revision | Azure SQL Database | same, supplied by the operator |
+| Dev / Staging | Static Web Apps | App Service web app | Azure SQL Database | application settings (`Section__Key`) + build-time `VITE_*` |
+| Production | Static Web Apps | App Service web app | Azure SQL Database | same, supplied by the operator |
 
 Build-time `VITE_*` values are baked per environment, so each environment needs its own build. Backend settings are strongly typed, validated at startup, and the **API refuses to start on a missing or placeholder value** — a deployment misconfiguration fails loudly at start instead of silently at the first request.
 
-Running the image on a developer PC answers `/health` but cannot reach the database, because `DefaultAzureCredential` finds no Azure CLI inside the container. Day-to-day development therefore stays on `dotnet run`; the container is verified in CI and in the dev environment.
+Day-to-day development stays on `dotnet run` (`DefaultAzureCredential` uses the developer's `az login`); the deployed app is verified in CI and in the dev environment.
 
 ---
 
@@ -569,7 +579,7 @@ Structured console logs carry route, outcome, duration and correlation id, under
 
 ### 11.4 Performance
 
-Datasets are per user and unpaginated by design; the architecture assumes a list small enough to render whole. The deliberate absence of polling keeps steady-state cost at zero requests per idle user. The known latency risks are the cold start after scale-to-zero and the Document Intelligence call, which is why the latter is outside the request entirely.
+Datasets are per user and unpaginated by design; the architecture assumes a list small enough to render whole. The deliberate absence of polling keeps steady-state cost at zero requests per idle user. The known latency risks are the Document Intelligence call, which is why it is outside the request entirely, and large PDFs streamed through the API instances.
 
 ### 11.5 Internationalisation and accessibility
 
@@ -593,13 +603,13 @@ Environment-dependent levels are **reported as not run** when prerequisites are 
 
 | Attribute | Target | Achieved by | Residual risk |
 |---|---|---|---|
-| **Security** | No unauthorised access to another user's demands or documents; no secret anywhere | Server-side auth chain, allowlist, own-data-only, managed identity, SharePoint as the document gate, strict CSP | SharePoint library permissions are outside the API's control (`OPEN-05`) |
+| **Security** | No unauthorised access to another user's demands or documents; no secret anywhere | Server-side auth chain, allowlist, own-data-only, managed identity, owner-only streaming of private blobs, strict CSP | Every PDF passes through the API, whose owner check is then the only gate (`DEC-24`, `OPEN-12`) |
 | **Maintainability** | A change on one side cannot silently break the other | Contract-first governance, ports and adapters, one owner per responsibility, mechanical contract checks | Hand-written frontend types need the `check-contract` gate to stay honest |
 | **Testability** | Every acceptance criterion testable without a live tenant or backend | Ports faked at the boundary, in-memory repositories, contract-derived fixtures, dev simulator | The simulator is not proof of production conformance (`SIM-06`) |
 | **Reliability** | No lost demand, no stuck demand, no corrupted state | Commit before notify, single-transaction extraction write, guarded worker, recovery sweep, reload on reconnect | In-process queue durability is bounded by the sweep interval (`OPEN-10`) |
-| **Availability** | A dependency outage degrades, never corrupts | `/health` for readiness, TCP liveness, best-effort notifier, SPA keeps the last list on failure | Scale-to-zero cold start is user-visible |
-| **Scalability** | Horizontal scaling without coordination | Stateless replicas, no session, SignalR outside the container, database as sole state | Unpaginated list grows linearly with a user's demands |
-| **Evolvability** | External dependencies replaceable without touching use cases | One port per external system; adapters isolated in `Infrastructure` | Engine and hosting (`DEC-14`, `DEC-15`) are confined to `Infrastructure`, the SQL project and the pipeline, so a change there touches no use case |
+| **Availability** | A dependency outage degrades, never corrupts | `/health` for the Health check, best-effort notifier, SPA keeps the last list on failure | The platform's reaction to a database outage (`HOST-03`, `OPEN-08d`) |
+| **Scalability** | Horizontal scaling without coordination | Stateless instances, no session, SignalR outside the app, database as sole state | Unpaginated list grows linearly with a user's demands |
+| **Evolvability** | External dependencies replaceable without touching use cases | One port per external system; adapters isolated in `Infrastructure` | Engine and hosting (`DEC-14`, `DEC-07`) are confined to `Infrastructure`, the SQL project and the pipeline, so a change there touches no use case |
 | **Observability** | Any user report traceable to a server log | `X-Correlation-Id` end to end, `traceId` equal to it, structured logs | Redaction rules must be respected in every new log statement |
 | **Usability** | Status visible without any manual action | Push signal plus authoritative re-read; explicit list states; French wording from codes | Real-time is best effort; reconnection reload is the safety net |
 
@@ -607,16 +617,16 @@ Environment-dependent levels are **reported as not run** when prerequisites are 
 
 ## 13. Architectural Decisions
 
-The authoritative decision register is `klesia_api/docs/specs/SPECIFICATIONS.md` §1.3 (`DEC-01`…`DEC-23`, `OPEN-01`…`OPEN-11`, `INT-*`). This section indexes the decisions with **system-wide** consequences and records their trade-offs.
+The authoritative decision register is `klesia_api/docs/specs/SPECIFICATIONS.md` §1.3 (`DEC-01`…`DEC-24`, `OPEN-01`…`OPEN-12`, `INT-*`). This section indexes the decisions with **system-wide** consequences and records their trade-offs.
 
 | Ref | Decision | Why | Trade-off accepted |
 |---|---|---|---|
 | `DEC-08` | The HTTP contract is canonical and machine-readable | Two independently developed applications need a referee that tooling can check | Every boundary change costs two or three coordinated commits |
 | `DEC-14` | **Azure SQL Database** (SQL Server) — the client's decision | Client decision; native `UNIQUEIDENTIFIER` and `BIT` types, three schemas, every constraint named | Repositories use T-SQL; the schema is state-based (DACPAC), so transitions are computed at publish time and must be reviewed |
-| `DEC-15` | **Azure Container Apps** for the API | Required by the customer's DSI | Containerisation, forwarded-header handling, probe design, and schema-publish ordering become the team's responsibility |
+| `DEC-07` | **Azure App Service** for the API | The client's decision | Always On is mandatory because the extraction runs in the process; PDFs and extraction share the instances' capacity; the Health check reacts to a database outage |
 | `DEC-02` | Dapper + hand-written SQL, **no EF Core** | Explicit SQL, schema owned by the SQL project, no hidden mapping-driven DDL | More SQL to write and test by hand |
 | `DEC-06` / `HOST-06` | Passwordless access with one user-assigned managed identity | Removes every stored credential from the system | One connection string works locally and in Azure; local development requires `az login` (or a Visual Studio sign-in) and an Entra database user created `FROM EXTERNAL PROVIDER` |
-| `DEC-13` | The backend copies the PDF into SharePoint and stores a **permanent** link | The document outlives the request; the browser never uploads to SharePoint; permissions stay where documents live | Access control for documents is outside the API; a failed insert after a copy needs best-effort cleanup |
+| `DEC-13` / `DEC-24` | The backend copies the PDF into a **private** Azure Blob Storage container and serves it **only through the API**, to its owner | Only the uploader may read a document; a SAS is a bearer token that cannot be tied to a user (examined, withdrawn) | Every PDF travels through the API; the owner check is the only gate; a failed insert after a copy needs best-effort cleanup |
 | `DEC-16` / `NOT-01` | Azure SignalR **Serverless**, one contentless event, owner-targeted | No real-time data contract to maintain, no trust in pushed data, no broadcast of activity | One extra `GET` per notification |
 | `DEC-17` / `EXT-01` | Extraction runs **after the response**, in-process, with a recovery sweep | Keeps the request fast and avoids introducing a broker before it is justified | Durability is bounded by the sweep; a broker remains the planned escape hatch (`OPEN-10`) |
 | `DEC-19` | Three terminal status codes; `ok` keeps its name | Renaming to `done` would change the contract, the seeds and the frontend for no benefit | The code reads less naturally than the concept it represents |
@@ -633,17 +643,17 @@ The authoritative decision register is `klesia_api/docs/specs/SPECIFICATIONS.md`
 
 ### 14.1 Imposed constraints (not negotiable at this level)
 
-- Azure SQL Database (the client's final decision, `DEC-14`); Azure Container Apps for the API (required by the customer's DSI, `DEC-15`); Azure Static Web Apps for the SPA.
+- Azure SQL Database (the client's final decision, `DEC-14`); Azure App Service for the API ; Azure Blob Storage for the documents (`DEC-24`); Azure Static Web Apps for the SPA.
 - No Entity Framework Core, no `DbContext`, no EF migrations.
 - Desktop-only UI; French user-facing text; English code and documentation.
 - Frontend-only on the SPA side: no backend logic, no OCR, no document storage, no polling, no manual refresh control, no editing or deleting.
 - Single Entra tenant; the SPA holds no secret.
 - Backend `Upload:MaxPdfSizeMb` and frontend `maxPdfSizeMb` must hold the same value.
 
-### 14.2 Assumptions (to confirm, recorded as such)
+### 14.2 Assumptions (Confirmed, recorded as such)
 
 - Single-tenant Entra application; `oid` is unique within the validated tenant.
-- SharePoint is reached with the container app's managed identity holding `Sites.Selected` on one site (`OPEN-11`).
+- The blob storage is reached with the web app's user-assigned managed identity holding *Storage Blob Data Contributor* on the one container, shared-key access being disabled (`OPEN-11`, `OPEN-12`).
 - Document Intelligence is called with the same managed identity (*Cognitive Services User*) and answers with the JSON of `EXT-04`; if it answers the standard `AnalyzeResult`, the mapping stays inside the Infrastructure adapter (`OPEN-09`).
 - Passwordless database access relies on `Authentication=Active Directory Default` and on the runtime identity existing as a database user created `FROM EXTERNAL PROVIDER` (`DEC-06`, `OPEN-07`).
 - The provisional 10 MB PDF limit is illustrative, not a confirmed business rule (`INT-05`).
@@ -654,23 +664,20 @@ The authoritative decision register is `klesia_api/docs/specs/SPECIFICATIONS.md`
 |---|---|
 | `OPEN-03` | Entra tenant id, API application id, SPA client id, registered redirect URIs |
 | `OPEN-07` | Azure SQL Database deployment: server and database name, service tier, region, network access (firewall rules or private endpoint), Entra administrator and database users, whether Entra-only authentication is enabled, TLS (`Encrypt=True`, `TrustServerCertificate=False`) |
-| `OPEN-08` | Container Apps deployment: environment and network, ingress exposure, registry, replicas and probes, body-size limit and timeout, infrastructure-code ownership, Log Analytics, GitHub-to-Azure OIDC |
+| `OPEN-08` | App Service deployment: plan, operating system and tier (Always On), network path, inbound exposure, instance count and Health check behaviour, request limits and timeout, infrastructure-code ownership, Log Analytics, GitHub-to-Azure OIDC |
 | `OPEN-09` | Document Intelligence: model id, endpoint, response envelope, optional fields, PDF limits, quota |
 | `OPEN-10` | Durability of background work: keep the in-process queue or move to a broker behind `IExtractionQueue` |
-| `OPEN-11` | SharePoint identity, site, library and folder |
-| `INT-05` | The real maximum PDF size, aligned across SPA, API and ingress |
+| `OPEN-11` | Storage identity: role assignment of the managed identity on the container |
+| `OPEN-12` | Storage account settings: network exposure, redundancy, soft delete, retention, one account per environment, load of the PDFs on the App Service |
+| `INT-05` | The real maximum PDF size, aligned across SPA, API and App Service host |
 
 Nothing that depends on these is hard-coded, and anything depending on them is reported as **unverified** rather than assumed.
 
-### 14.4 Known internal misalignments (to resolve)
+### 14.4 Known internal misalignments
 
-Recorded here because they are visible to any agent reading the workspace and must not be resolved by guesswork.
+None is known today. Three were recorded on 2026-11-15 and resolved on 2026-11-19: the contract (v0.5.0) no longer carries any staged delivery and describes the five operations, including the document route; the lot-scoping rules were removed from `check-contract`, `integration-test` and `integration-reviewer`; and `GOV-01` (§1.4) is stated in the root `CLAUDE.md` and in the contract header. The API specification (`DEC-08`: specification first, the contract as its machine-readable form) and the webapp specification (it must agree with the contract) express the same rule.
 
-| # | Misalignment | Suggested resolution |
-|---|---|---|
-| 1 | `contracts/openapi.yaml` is **v0.4.0** and still describes a staged delivery (`x-implementation-status: sprint-1 / adopted`), while both specifications explicitly carry no phasing. The webapp specification's own "Contract alignment" paragraph lists the required amendments. | Amend the contract per that paragraph: drop the staged-delivery language and the `x-implementation-status` values, remove "successful `createDemand`" from the `listDemands` trigger list (`RT-05`), and specify `N-2` as in `BE-04`/`INT-11`. Bump the contract version. |
-| 2 | `check-contract`, `integration-test` and `integration-reviewer` all enforce **Lot 1 / Lot 2** scoping, which the specifications removed. | Once item 1 is done, remove the lot-scoping rules from the three assets, or restate them as delivery sequencing that is explicitly *not* an architectural constraint. |
-| 3 | Source-of-truth wording differs: the root `CLAUDE.md` calls the contract the single source of truth; the API specification (`DEC-08`) makes itself authoritative with the contract as its machine-readable mirror; the webapp specification says it prevails until the contract is amended. | Adopt `GOV-01` (§1.4) as the single statement in all three places: the owning specification changes first, the contract changes in the same commit, and any disagreement is a defect. |
+Any new misalignment found by `check-contract` or `integration-reviewer` is recorded here until it is resolved; it is never resolved by guesswork.
 
 ---
 
@@ -681,9 +688,9 @@ Recorded here because they are visible to any agent reading the workspace and mu
 | Kind of change | Required sequence |
 |---|---|
 | **HTTP boundary** (route, schema, status, header, auth rule, CORS) | owning specification → `contracts/openapi.yaml` → backend → `src/models/demand.ts` → frontend consumption → backend tests → frontend tests → `check-contract` → `integration-reviewer` |
-| **Database schema** | API specification §3 → edit the table or schema definition in the SQL project (never DDL in the API) → build the DACPAC → **review the generated publish script**, data-loss blocking on → repositories → tests → confirm backward compatibility with the previous revision (`HOST-12`) |
+| **Database schema** | API specification §3 → edit the table or schema definition in the SQL project (never DDL in the API) → build the DACPAC → **review the generated publish script**, data-loss blocking on → repositories → tests → confirm backward compatibility with the previous version (`HOST-11`) |
 | **New external dependency** | this document (§4, §5, §13) → a port in `Application` → an adapter in `Infrastructure` → configuration keys and startup validation → a fake for tests → identity and role assignment |
-| **Hosting or infrastructure** | this document (§10) + API specification §6.3 → `Dockerfile`/pipeline/Bicep → `OPEN-08` items confirmed with the DSI before production |
+| **Hosting or infrastructure** | this document (§10) + API specification §6.3 → pipeline/Bicep → `OPEN-08` items confirmed with the DSI before production |
 | **UI behaviour with no boundary impact** | webapp specification → components/composables → acceptance tests; no contract change |
 | **A principle in §3** | this document first, with the rationale |
 
@@ -696,7 +703,7 @@ Recorded here because they are visible to any agent reading the workspace and mu
 | French wording, labels, layout | The read contract shape, mirrored in hand-written types and in every fixture |
 | The PDF size limit (runtime JSON on the SPA, configuration on the API) | The "notification carries no data" rule — it underpins the absence of optimistic state |
 | Adding a status *label* on the client (unknown codes already degrade safely) | Adding a status *code* — a closed enum in the contract, a check constraint and seed data |
-| Hosting parameters: replicas, probes, scaling | Pagination or filtering of the list — it changes a contract that currently promises everything |
+| Hosting parameters: instances, Health check, scaling | Pagination or filtering of the list — it changes a contract that currently promises everything |
 
 ### 15.3 Anticipated evolutions
 
@@ -732,6 +739,6 @@ Architectural drift is detected mechanically, not by memory:
 | Cross-application governance | `.claude/skills/check-contract`, `.claude/skills/integration-test`, `.claude/agents/integration-reviewer` |
 | Database schema | `klesia_api/database/Klesia.Database` (`Schemas/`, `Tables/`, `Scripts/`, `PostDeployment.sql`) |
 | Local development | `klesia_api/docs/local-development.md`, `klesia_webapp/tools/dev-simulator/` |
-| Deployment guides | `klesia_api/docs/deployment-container-apps.md`, `klesia_webapp/infra/azure-signalr/` |
+| Deployment guides | `klesia_api/docs/deployment-app-service.md`, `klesia_webapp/infra/azure-signalr/` |
 | Visual references | `klesia_webapp/maquettes/` |
 | Work tracking | `klesia_webapp/docs/TASKS.md` |

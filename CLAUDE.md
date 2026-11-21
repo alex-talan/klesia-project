@@ -23,7 +23,7 @@ Never introduce or modify an API request/response contract without updating the 
 For features affecting the HTTP boundary:
 
 1. inspect both applications;
-2. update the contract first;
+2. update the owning specification and the contract in the same change;
 3. modify the backend implementation;
 4. update the frontend API layer (hand-written types in `klesia_webapp/src/models/demand.ts`);
 5. run backend tests;
@@ -44,12 +44,12 @@ The canonical API specification is: `contracts/openapi.yaml`
 
 ### Mandatory rules
 
-1. The OpenAPI specification is the single source of truth for HTTP API contracts.
+1. `contracts/openapi.yaml` is the machine-readable form of the HTTP boundary and wins on anything observable on the wire. The owning application's specification changes first and the contract in the same change; a disagreement between a specification and the contract is a defect, never a choice (`architecture-plan.md` section 1.4, GOV-01).
 2. Never introduce, remove, or modify an API endpoint without updating the OpenAPI specification.
 3. Never independently invent API request or response structures in either application.
 4. When implementing a cross-application feature:
    - Read the existing OpenAPI contract.
-   - Update the contract first.
+   - Update the owning specification and the contract in the same change.
    - Implement the backend changes.
    - Update the hand-written frontend types (`klesia_webapp/src/models/demand.ts`) so that they mirror the contract exactly.
    - Update frontend API consumption.
