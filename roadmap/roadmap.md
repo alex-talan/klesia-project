@@ -139,7 +139,7 @@ flowchart LR
 
 | Task number | Status | Task | Compact description | Dependencies | Priority | Area |
 |---|---|---|---|---|---|---|
-| [T-001](T-001.md) | TODO | Baseline contract and repository audit | Run `check-contract` on the current state and record the baseline findings | — | P1 | root |
+| [T-001](T-001.md) | DONE | Baseline contract and repository audit | Run `check-contract` on the current state and record the baseline findings | — | P1 | root |
 | [T-002](T-002.md) | BLOCKED | Align work-tracking references | Point the architecture plan and webapp `CLAUDE.md` to the roadmap instead of the missing `docs/TASKS.md` | `ARB-001` | P3 | root |
 | [T-003](T-003.md) | TODO | Add `CreatedAt` to `dbo.Demand` | Add the UTC creation column with its named default (DEC-23) | — | P1 | db |
 | [T-004](T-004.md) | TODO | Create `dbo.DemandInformation` | Declare the extraction information table with its checks (§3.3, §3.4) | — | P1 | db |
@@ -228,6 +228,7 @@ flowchart LR
 | [T-087](T-087.md) | BLOCKED | Dev environment deployment and verification | Deploy both applications to dev and run AT-33, AT-35, AT-57 prerequisites | `T-043`, `T-075`, `T-078`, `T-080`, `T-085`, `T-086`, `EXT-001`, `EXT-007` | P2 | cross |
 | [T-088](T-088.md) | TODO | PDF viewer check under production headers | Manual AC-57 in Chrome, Edge and Firefox on the deployed dev SWA | `T-087` | P3 | web |
 | [T-089](T-089.md) | TODO | Production readiness and go-live | Every arbitrage settled, open items answered, production checklist executed | `T-076`, `T-077`, `T-087`, `T-088` | P3 | cross |
+| [T-090](T-090.md) | TODO | Fix wording drift in webapp documents | AUTH-03 and webapp `CLAUDE.md` say "both" protected operations (three exist); Appendix A section number | — | P3 | web |
 
 ---
 
@@ -266,3 +267,4 @@ With the statuses above, the tasks that can start immediately are: **T-001, T-00
 |---|---|
 | 2026-11-21 | Roadmap created: 89 tasks, 24 arbitrages, 8 external dependencies. |
 | 2026-11-22 | Skills `/implement-task` and `/settle-arbitrage` added; `T-xxx.md` Status rows mirror section 5. |
+| 2026-11-22 | T-001 DONE (report `reports/T-001-baseline.md`); T-090 and ARB-025 created from its findings. |

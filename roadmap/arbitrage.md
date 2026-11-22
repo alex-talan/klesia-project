@@ -53,9 +53,11 @@ This document lists every decision that must be settled and every open question 
 | [ARB-022](ARB-022.md) | End-to-end test scope | Automated E2E smoke test (Playwright) with an Entra test tenant, or manual live test only | NO | `T-077` | OPEN | Tech lead + client |
 | [ARB-023](ARB-023.md) | Azure App Configuration and Key Vault adoption | Keep or remove the speculative `Azure:*` sections of `appsettings.json` | NO | `T-007` | OPEN | Tech lead |
 | [ARB-024](ARB-024.md) | Node.js version for builds | Node 26 LTS as specified vs the version installed locally and on CI/SWA build images | NO | `T-047`, `T-048`, `T-086` | OPEN | Tech lead |
+| [ARB-025](ARB-025.md) | Development-only OpenAPI document route vs the contract surface | Decide how the anonymous OpenAPI document served in Development relates to the contract, which declares `/health` as the only anonymous route | NO | `T-010`, `T-074` | OPEN | Tech lead |
 
 ## 4. Change log
 
 | Date | Change |
 |---|---|
 | 2026-11-21 | 24 arbitrages created, all `OPEN`. |
+| 2026-11-22 | ARB-025 created by T-001 (baseline audit, finding N-01). |
