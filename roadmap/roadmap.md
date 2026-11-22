@@ -160,7 +160,7 @@ flowchart LR
 | [T-013](T-013.md) | DONE | SQL constraint tests (opt-in) | Tests of §3.6 / AT-15, AT-16, AT-49, run only with `KLESIA_TEST_SQL_CONNECTION` | `T-006`, `T-012` | P2 | api |
 | [T-014](T-014.md) | DONE | Correlation id and request logging | `X-Correlation-Id` middleware and structured, redacted request logs | `T-012` | P1 | api |
 | [T-015](T-015.md) | DONE | ProblemDetails and exception handling | `application/problem+json` for every non-2xx, sanitised, `traceId` = correlation id | `T-014` | P1 | api |
-| [T-016](T-016.md) | TODO | CORS policy | Exact configured origins, methods, headers, max age, no credentials | `T-012` | P1 | api |
+| [T-016](T-016.md) | DONE | CORS policy | Exact configured origins, methods, headers, max age, no credentials | `T-012` | P1 | api |
 | [T-017](T-017.md) | TODO | HTTPS behind the App Service front end | Forwarded headers trusted correctly, no redirect loop (HOST-02, AT-36) | `T-012` | P2 | api |
 | [T-018](T-018.md) | TODO | JWT bearer authentication | v2 access-token validation, `tid`, `nonce`, `oid` checks, `401` problem body | `T-015` | P1 | api |
 | [T-019](T-019.md) | TODO | Delegated-scope policy | `DelegatedUser` policy as default and fallback, `403` problem body | `T-018` | P1 | api |
@@ -302,3 +302,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-22 | T-013 DONE: opt-in SQL constraint suite added; without KLESIA_TEST_SQL_CONNECTION, 6 facts skip explicitly and the full solution passes 70 tests. Live disposable-SQL execution remains T-077. |
 | 2026-11-22 | T-014 DONE: X-Correlation-Id middleware, JSON console scopes and redacted request logging pass integration tests; full solution passes 76 tests with 6 SQL skips. |
 | 2026-11-22 | T-015 DONE: global ProblemDetails and exception handling return sanitized 404/500 JSON with matching traceId; full solution passes 78 tests with 6 SQL skips. |
+| 2026-11-22 | T-016 DONE: exact configuration-based CORS policy and routing middleware pass 5 focused preflight tests; full solution passes 83 tests with 6 SQL skips. |
