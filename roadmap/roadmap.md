@@ -164,7 +164,7 @@ flowchart LR
 | [T-017](T-017.md) | DONE | HTTPS behind the App Service front end | Forwarded headers trusted correctly, no redirect loop (HOST-02, AT-36) | `T-012` | P2 | api |
 | [T-018](T-018.md) | DONE | JWT bearer authentication | v2 access-token validation, `tid`, `nonce`, `oid` checks, `401` problem body | `T-015` | P1 | api |
 | [T-019](T-019.md) | DONE | Delegated-scope policy | `DelegatedUser` policy as default and fallback, `403` problem body | `T-018` | P1 | api |
-| [T-020](T-020.md) | TODO | SQL connection factory and user repository | Passwordless `SqlConnection` factory and `IUserRepository` (Dapper) | `T-008`, `T-009` | P1 | api |
+| [T-020](T-020.md) | DONE | SQL connection factory and user repository | Passwordless `SqlConnection` factory and `IUserRepository` (Dapper) | `T-008`, `T-009` | P1 | api |
 | [T-021](T-021.md) | TODO | Database allowlist gate | Resolve the active user from `oid`; identical `403` for unknown and inactive | `T-019`, `T-020` | P1 | api |
 | [T-022](T-022.md) | TODO | `GET /health` | Anonymous probe with SQL check, `200`/`503` (AT-22, AT-34) | `T-015`, `T-020` | P1 | api |
 | [T-023](T-023.md) | BLOCKED | Contract schema-validation helper | Test helper validating responses against `contracts/openapi.yaml` | `T-012`, `ARB-003` | P2 | api |
@@ -306,3 +306,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-22 | T-017 DONE: standard App Service forwarded-header handling and no HTTPS redirect pass AT-36; full solution passes 84 tests with 6 SQL skips. |
 | 2026-11-22 | T-018 DONE: JWT bearer authentication and 401 challenge behavior pass 15 focused authentication tests; full solution passes 99 tests with 6 SQL skips. |
 | 2026-11-22 | T-019 DONE: exact delegated-scope policy is default/fallback and centralized 403 handling passes 8 focused authorization tests; full solution passes 104 tests with 6 SQL skips. |
+| 2026-11-22 | T-020 DONE: passwordless SQL connection factory and Dapper user repository are registered and unit-tested; full solution passes 105 tests with 6 SQL skips. Live oid lookup remains not run. |
