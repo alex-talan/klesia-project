@@ -152,7 +152,7 @@ flowchart LR
 | [T-005](T-005.md) | DONE | Create `dbo.DemandFormula` | Declare the formula table and its FK index | `T-004` | P1 | db |
 | [T-006](T-006.md) | DONE | Verify DACPAC build, publish profile and seeds | Build the SQL project, review the publish profile, seeds and backward compatibility | `T-003`, `T-005` | P1 | db |
 | [T-007](T-007.md) | DONE | Align API configuration files | Make `appsettings*.json` match spec §6.1 and remove speculative sections | `T-001` | P1 | api |
-| [T-008](T-008.md) | TODO | Domain model | Entities and value objects: user, demand, GK number, status, extraction | — | P1 | api |
+| [T-008](T-008.md) | BLOCKED | Domain model | Entities and value objects: user, demand, GK number, status, extraction | `T-010` (full solution verification) | P1 | api |
 | [T-009](T-009.md) | TODO | Strongly typed options and startup validation | Bind and validate every configuration section; refuse to start on placeholders | `T-007` | P1 | api |
 | [T-010](T-010.md) | TODO | WebApi composition root | `Program.cs`, layer registration methods, controllers, OpenAPI in Development | `T-009` | P1 | api |
 | [T-011](T-011.md) | TODO | API CI workflow | GitHub Actions: restore, build, test, SQL project build on every push/PR | `T-006`, `T-010` | P2 | api |
@@ -291,3 +291,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-22 | T-005 DONE: added `dbo.DemandFormula`; SQL project builds and DACPAC contains the table, FK and index. Full solution build/test remain blocked by missing WebApi `Main` (T-010). |
 | 2026-11-22 | T-006 DONE: SQL project, six-table object inventory, seeds and safe publish-profile checks pass; live publish was not run (no target database configured). |
 | 2026-11-22 | T-007 DONE: aligned tracked API settings and local-development example to §6.1; JSON and ignore checks pass. Full solution build/test hit the existing missing WebApi entry point (T-010). |
+| 2026-11-22 | T-008 Domain model implemented and its isolated build/tests pass; task is BLOCKED on T-010 because full solution verification fails with the missing WebApi entry point. |
