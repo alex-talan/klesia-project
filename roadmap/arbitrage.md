@@ -20,7 +20,8 @@ This document lists every decision that must be settled and every open question 
 ## 2. Source of truth and synchronisation
 
 - The header table of each `ARB-xxx.md` is **authoritative** (fields `Number`, `Subject`, `Description`, `Blocking`, `Concerning tasks`, `Status`). The table below is a synchronised copy.
-- To settle an arbitrage: fill the *Decision* section of its file (decision, date, decided by, follow-up), then set `Status` to `SETTLED` in the header. The synchronisation then (1) copies the header into the table below, (2) in [`roadmap.md`](roadmap.md), moves each concerned task from `BLOCKED` to `TODO` when all its other dependencies allow it.
+- To settle an arbitrage, run **`/settle-arbitrage ARB-xxx`** (`.claude/skills/settle-arbitrage`): it asks the questions, then fills the *Decision* section of its file (decision, date, decided by, follow-up), sets `Status` to `SETTLED` in the header, (1) copies the header into the table below, (2) in [`roadmap.md`](roadmap.md), moves each concerned task from `BLOCKED` to `TODO` when all its other dependencies allow it.
+- New arbitrages raised while implementing a task (`/implement-task T-xxx`) are appended at the end of the table below, each with its `ARB-xxx.md` file.
 - If the decision differs from the documented default, add the follow-up tasks to the roadmap (new numbers at the end of the table, with their dependencies) and list them in the *Decision* section.
 - A decision that changes the HTTP boundary follows the contract-first rule: owning specification, then `contracts/openapi.yaml`, in the same change (root `CLAUDE.md`, GOV-01).
 

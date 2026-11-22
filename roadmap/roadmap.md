@@ -51,6 +51,8 @@ Only **gating** dependencies appear in the *Dependencies* column. Arbitrages tha
 
 > **A task can be implemented IF AND ONLY IF all of its dependencies are satisfied:** every `T-xxx` is `DONE`, every `ARB-xxx` is `SETTLED`, every `EXT-xxx` is `PROVIDED`.
 
+Two workspace skills apply this protocol: **`/implement-task T-xxx`** (`.claude/skills/implement-task`) checks the gate, implements the task, verifies it and updates the statuses; **`/settle-arbitrage ARB-xxx`** (`.claude/skills/settle-arbitrage`) asks the questions of an arbitrage, records the decision and unblocks the waiting tasks. The task table of section 5 is authoritative for task status; the `Status` row of each `T-xxx.md` mirrors it (it reads *Tracked in roadmap.md* until a skill first updates it).
+
 ### 2.1 Protocol before starting a task
 
 1. Open this file and find the task row in section 5.
@@ -75,7 +77,7 @@ Only **gating** dependencies appear in the *Dependencies* column. Arbitrages tha
 | `WIP` | `BLOCKED` | A problem needing a decision is found; record it in the task file and, if it is a decision, propose a new `ARB`. |
 | `WIP` | `DONE` | All acceptance criteria are verified and the completion record is filled. |
 
-A task whose only unsatisfied dependencies are other **tasks** stays `TODO` (it is simply not ready yet). When an arbitrage is settled, the synchronisation skill updates [`arbitrage.md`](arbitrage.md) from the `ARB-xxx.md` header and moves the concerned tasks from `BLOCKED` to `TODO` when nothing else blocks them.
+A task whose only unsatisfied dependencies are other **tasks** stays `TODO` (it is simply not ready yet). When an arbitrage is settled, `/settle-arbitrage` updates [`arbitrage.md`](arbitrage.md) from the `ARB-xxx.md` header and moves the concerned tasks from `BLOCKED` to `TODO` when nothing else blocks them.
 
 ### 2.3 Rules that apply to every task
 
@@ -263,3 +265,4 @@ With the statuses above, the tasks that can start immediately are: **T-001, T-00
 | Date | Change |
 |---|---|
 | 2026-11-21 | Roadmap created: 89 tasks, 24 arbitrages, 8 external dependencies. |
+| 2026-11-22 | Skills `/implement-task` and `/settle-arbitrage` added; `T-xxx.md` Status rows mirror section 5. |
