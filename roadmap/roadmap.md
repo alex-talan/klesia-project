@@ -147,7 +147,7 @@ flowchart LR
 |---|---|---|---|---|---|---|
 | [T-001](T-001.md) | DONE | Baseline contract and repository audit | Run `check-contract` on the current state and record the baseline findings | — | P1 | root |
 | [T-002](T-002.md) | DONE | Align work-tracking references | Point the architecture plan and webapp `CLAUDE.md` to the roadmap instead of the missing `docs/TASKS.md` | `ARB-001` | P3 | root |
-| [T-003](T-003.md) | TODO | Add `CreatedAt` to `dbo.Demand` | Add the UTC creation column with its named default (DEC-23) | — | P1 | db |
+| [T-003](T-003.md) | DONE | Add `CreatedAt` to `dbo.Demand` | Add the UTC creation column with its named default (DEC-23) | — | P1 | db |
 | [T-004](T-004.md) | TODO | Create `dbo.DemandInformation` | Declare the extraction information table with its checks (§3.3, §3.4) | — | P1 | db |
 | [T-005](T-005.md) | TODO | Create `dbo.DemandFormula` | Declare the formula table and its FK index | `T-004` | P1 | db |
 | [T-006](T-006.md) | TODO | Verify DACPAC build, publish profile and seeds | Build the SQL project, review the publish profile, seeds and backward compatibility | `T-003`, `T-005` | P1 | db |
@@ -236,6 +236,7 @@ flowchart LR
 | [T-089](T-089.md) | TODO | PDF viewer check under production headers | Manual AC-57 in Chrome, Edge and Firefox on the deployed dev SWA | `T-088` | P3 | web |
 | [T-090](T-090.md) | TODO | Production readiness and go-live | Every arbitrage settled, open items answered, production checklist executed | `T-077`, `T-078`, `T-088`, `T-089` | P3 | cross |
 | [T-091](T-091.md) | TODO | Fix wording drift in webapp documents | AUTH-03 and webapp `CLAUDE.md` say "both" protected operations (three exist); Appendix A section number | — | P3 | web |
+| [T-092](T-092.md) | TODO | Resolve vulnerable `System.Security.Cryptography.Pkcs` | Transitive 9.0.11 has a high (NU1903) and a moderate (NU1902) advisory on every API build | — | P2 | api |
 
 ---
 
@@ -285,3 +286,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-22 | T-001 DONE (report `reports/T-001-baseline.md`); T-091 and ARB-025 created from its findings. |
 | 2026-11-22 | ARB-001 settled; T-002 unblocked (`BLOCKED` → `TODO`). |
 | 2026-11-22 | Reorganised for milestone M1 (section 8): frontend demo path renumbered T-047…T-067 → T-037…T-057; new milestone task T-058; extraction and backend hardening T-037…T-046 → T-059…T-068; T-068…T-090 → T-069…T-091. All references in `roadmap/` updated. Document Intelligence and extraction options are validated at startup only once the extraction is wired (T-009, T-065). |
+| 2026-11-22 | T-002 and T-003 DONE; T-092 created by T-003 (vulnerable transitive package found by the solution build). |
