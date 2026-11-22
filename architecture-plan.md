@@ -22,7 +22,7 @@ It exists so that a developer or a coding agent working inside one application c
 | In scope | Out of scope |
 |---|---|
 | The whole KLESIA system: `klesia-api`, `klesia-webapp`, the shared HTTP contract, and the external services both depend on | Implementation rules internal to one application (they belong to that application's `CLAUDE.md` and specification) |
-| Architectural boundaries, responsibilities, integration rules, data ownership, security and deployment topology | Delivery planning, sprint content, estimates, task breakdown (`klesia_webapp/docs/TASKS.md`) |
+| Architectural boundaries, responsibilities, integration rules, data ownership, security and deployment topology | Delivery planning, sprint content, estimates, task breakdown (`roadmap/roadmap.md`) |
 | The rationale and trade-offs behind the structural decisions | Restating the functional requirements, acceptance criteria or HTTP schemas already specified elsewhere |
 
 **This document describes *how the system is designed and why*. It is not a development plan and does not say *what to build when*.**
@@ -741,4 +741,4 @@ Architectural drift is detected mechanically, not by memory:
 | Local development | `klesia_api/docs/local-development.md`, `klesia_webapp/tools/dev-simulator/` |
 | Deployment guides | `klesia_api/docs/deployment-app-service.md`, `klesia_webapp/infra/azure-signalr/` |
 | Visual references | `klesia_webapp/maquettes/` |
-| Work tracking | `klesia_webapp/docs/TASKS.md` |
+| Work tracking | `roadmap/roadmap.md` (tasks, milestones, external dependencies), `roadmap/arbitrage.md` (decisions and open questions) |

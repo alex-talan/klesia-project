@@ -146,7 +146,7 @@ flowchart LR
 | Task number | Status | Task | Compact description | Dependencies | Priority | Area |
 |---|---|---|---|---|---|---|
 | [T-001](T-001.md) | DONE | Baseline contract and repository audit | Run `check-contract` on the current state and record the baseline findings | — | P1 | root |
-| [T-002](T-002.md) | TODO | Align work-tracking references | Point the architecture plan and webapp `CLAUDE.md` to the roadmap instead of the missing `docs/TASKS.md` | `ARB-001` | P3 | root |
+| [T-002](T-002.md) | DONE | Align work-tracking references | Point the architecture plan and webapp `CLAUDE.md` to the roadmap instead of the missing `docs/TASKS.md` | `ARB-001` | P3 | root |
 | [T-003](T-003.md) | TODO | Add `CreatedAt` to `dbo.Demand` | Add the UTC creation column with its named default (DEC-23) | — | P1 | db |
 | [T-004](T-004.md) | TODO | Create `dbo.DemandInformation` | Declare the extraction information table with its checks (§3.3, §3.4) | — | P1 | db |
 | [T-005](T-005.md) | TODO | Create `dbo.DemandFormula` | Declare the formula table and its FK index | `T-004` | P1 | db |
