@@ -149,7 +149,7 @@ flowchart LR
 | [T-002](T-002.md) | DONE | Align work-tracking references | Point the architecture plan and webapp `CLAUDE.md` to the roadmap instead of the missing `docs/TASKS.md` | `ARB-001` | P3 | root |
 | [T-003](T-003.md) | DONE | Add `CreatedAt` to `dbo.Demand` | Add the UTC creation column with its named default (DEC-23) | — | P1 | db |
 | [T-004](T-004.md) | DONE | Create `dbo.DemandInformation` | Declare the extraction information table with its checks (§3.3, §3.4) | — | P1 | db |
-| [T-005](T-005.md) | TODO | Create `dbo.DemandFormula` | Declare the formula table and its FK index | `T-004` | P1 | db |
+| [T-005](T-005.md) | DONE | Create `dbo.DemandFormula` | Declare the formula table and its FK index | `T-004` | P1 | db |
 | [T-006](T-006.md) | TODO | Verify DACPAC build, publish profile and seeds | Build the SQL project, review the publish profile, seeds and backward compatibility | `T-003`, `T-005` | P1 | db |
 | [T-007](T-007.md) | TODO | Align API configuration files | Make `appsettings*.json` match spec §6.1 and remove speculative sections | `T-001` | P1 | api |
 | [T-008](T-008.md) | TODO | Domain model | Entities and value objects: user, demand, GK number, status, extraction | — | P1 | api |
@@ -288,3 +288,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-22 | Reorganised for milestone M1 (section 8): frontend demo path renumbered T-047…T-067 → T-037…T-057; new milestone task T-058; extraction and backend hardening T-037…T-046 → T-059…T-068; T-068…T-090 → T-069…T-091. All references in `roadmap/` updated. Document Intelligence and extraction options are validated at startup only once the extraction is wired (T-009, T-065). |
 | 2026-11-22 | T-002 and T-003 DONE; T-092 created by T-003 (vulnerable transitive package found by the solution build). |
 | 2026-11-22 | T-004 DONE: added `dbo.DemandInformation`; SQL project builds and DACPAC contains the table. Full solution build/test remain blocked by missing WebApi `Main` (T-010). |
+| 2026-11-22 | T-005 DONE: added `dbo.DemandFormula`; SQL project builds and DACPAC contains the table, FK and index. Full solution build/test remain blocked by missing WebApi `Main` (T-010). |
