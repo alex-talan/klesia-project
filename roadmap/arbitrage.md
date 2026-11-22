@@ -29,7 +29,7 @@ This document lists every decision that must be settled and every open question 
 
 | Arbitrage number | Subject | Description | Blocking | Concerning tasks | Status | To be decided by |
 |---|---|---|---|---|---|---|
-| [ARB-001](ARB-001.md) | Work-tracking source of truth | Confirm that `roadmap/` replaces `klesia_webapp/docs/TASKS.md` (referenced but missing) | YES | `T-002` | OPEN | Project owner |
+| [ARB-001](ARB-001.md) | Work-tracking source of truth | Confirm that `roadmap/` replaces `klesia_webapp/docs/TASKS.md` (referenced but missing) | YES | `T-002` | SETTLED | Project owner |
 | [ARB-002](ARB-002.md) | Maximum PDF size and request limits | Real PDF limit aligned across SPA, API, App Service host, platform timeout and Document Intelligence (INT-05, OPEN-08f, OPEN-09d) | NO | `T-009`, `T-032`, `T-036`, `T-051`, `T-054`, `T-082`, `T-089` | OPEN | Client + DSI |
 | [ARB-003](ARB-003.md) | JSON-schema library for backend contract tests | Which package validates API responses against `contracts/openapi.yaml` in xUnit tests | YES | `T-023`, `T-044` | OPEN | Tech lead |
 | [ARB-004](ARB-004.md) | Server-side Azure SignalR integration | Management SDK or raw REST, Azure role of the identity, access keys in dev or managed identity only | YES | `T-030`, `T-031`, `T-078`, `T-079` | OPEN | Tech lead + DSI |
@@ -61,3 +61,4 @@ This document lists every decision that must be settled and every open question 
 |---|---|
 | 2026-11-21 | 24 arbitrages created, all `OPEN`. |
 | 2026-11-22 | ARB-025 created by T-001 (baseline audit, finding N-01). |
+| 2026-11-22 | ARB-001 settled: `roadmap/` is the single work tracker. |
