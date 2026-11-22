@@ -157,7 +157,7 @@ flowchart LR
 | [T-010](T-010.md) | DONE | WebApi composition root | `Program.cs`, layer registration methods, controllers, OpenAPI in Development | `T-009` | P1 | api |
 | [T-011](T-011.md) | BLOCKED | API CI workflow | GitHub Actions: restore, build, test, SQL project build on every push/PR | `T-006`, `T-010` | P2 | api |
 | [T-012](T-012.md) | DONE | Backend integration-test harness | `WebApplicationFactory`, signed test tokens, fakes, log capture | `T-010` | P1 | api |
-| [T-013](T-013.md) | TODO | SQL constraint tests (opt-in) | Tests of §3.6 / AT-15, AT-16, AT-49, run only with `KLESIA_TEST_SQL_CONNECTION` | `T-006`, `T-012` | P2 | api |
+| [T-013](T-013.md) | DONE | SQL constraint tests (opt-in) | Tests of §3.6 / AT-15, AT-16, AT-49, run only with `KLESIA_TEST_SQL_CONNECTION` | `T-006`, `T-012` | P2 | api |
 | [T-014](T-014.md) | TODO | Correlation id and request logging | `X-Correlation-Id` middleware and structured, redacted request logs | `T-012` | P1 | api |
 | [T-015](T-015.md) | TODO | ProblemDetails and exception handling | `application/problem+json` for every non-2xx, sanitised, `traceId` = correlation id | `T-014` | P1 | api |
 | [T-016](T-016.md) | TODO | CORS policy | Exact configured origins, methods, headers, max age, no credentials | `T-012` | P1 | api |
@@ -299,3 +299,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-22 | T-008 DONE: Domain entities and value objects pass 20 focused tests; the isolated Domain build and full solution build/test pass with no Domain-layer references. |
 | 2026-11-22 | T-011 partial: API CI workflow added; local Release restore/build/test and DACPAC build pass. GitHub-hosted run URL remains unverified, so the task is BLOCKED pending an authorized push. |
 | 2026-11-22 | T-012 DONE: integration-test host, RSA test tokens, static JWT metadata hook, service replacement helpers and log sink pass 11 focused harness tests; full solution passes 70 tests. |
+| 2026-11-22 | T-013 DONE: opt-in SQL constraint suite added; without KLESIA_TEST_SQL_CONNECTION, 6 facts skip explicitly and the full solution passes 70 tests. Live disposable-SQL execution remains T-077. |
