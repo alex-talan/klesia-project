@@ -161,7 +161,7 @@ flowchart LR
 | [T-014](T-014.md) | DONE | Correlation id and request logging | `X-Correlation-Id` middleware and structured, redacted request logs | `T-012` | P1 | api |
 | [T-015](T-015.md) | DONE | ProblemDetails and exception handling | `application/problem+json` for every non-2xx, sanitised, `traceId` = correlation id | `T-014` | P1 | api |
 | [T-016](T-016.md) | DONE | CORS policy | Exact configured origins, methods, headers, max age, no credentials | `T-012` | P1 | api |
-| [T-017](T-017.md) | TODO | HTTPS behind the App Service front end | Forwarded headers trusted correctly, no redirect loop (HOST-02, AT-36) | `T-012` | P2 | api |
+| [T-017](T-017.md) | DONE | HTTPS behind the App Service front end | Forwarded headers trusted correctly, no redirect loop (HOST-02, AT-36) | `T-012` | P2 | api |
 | [T-018](T-018.md) | TODO | JWT bearer authentication | v2 access-token validation, `tid`, `nonce`, `oid` checks, `401` problem body | `T-015` | P1 | api |
 | [T-019](T-019.md) | TODO | Delegated-scope policy | `DelegatedUser` policy as default and fallback, `403` problem body | `T-018` | P1 | api |
 | [T-020](T-020.md) | TODO | SQL connection factory and user repository | Passwordless `SqlConnection` factory and `IUserRepository` (Dapper) | `T-008`, `T-009` | P1 | api |
@@ -303,3 +303,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-22 | T-014 DONE: X-Correlation-Id middleware, JSON console scopes and redacted request logging pass integration tests; full solution passes 76 tests with 6 SQL skips. |
 | 2026-11-22 | T-015 DONE: global ProblemDetails and exception handling return sanitized 404/500 JSON with matching traceId; full solution passes 78 tests with 6 SQL skips. |
 | 2026-11-22 | T-016 DONE: exact configuration-based CORS policy and routing middleware pass 5 focused preflight tests; full solution passes 83 tests with 6 SQL skips. |
+| 2026-11-22 | T-017 DONE: standard App Service forwarded-header handling and no HTTPS redirect pass AT-36; full solution passes 84 tests with 6 SQL skips. |
