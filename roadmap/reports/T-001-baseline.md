@@ -40,17 +40,17 @@
 | Id | Where | Says | Should say | Proposed fix | Contract change? | Mapped to |
 |---|---|---|---|---|---|---|
 | D-01 | `klesia_api/src/WebApi/appsettings.json` lines 14–24 | `Azure:Storage:BlobServiceUri`, plus `Azure:AppConfiguration`, `Azure:KeyVault`, `Azure:ServiceBus` | API spec §6.1: `Storage:BlobServiceUri`, `Storage:ContainerName`; no App Configuration, Key Vault or Service Bus key | Align with §6.1 | No | [T-007](../T-007.md), [ARB-023](../ARB-023.md) |
-| D-02 | `klesia_webapp/docs/specs/SPECIFICATIONS.md` line 163 (AUTH-03); `klesia_webapp/CLAUDE.md` line 36 (rule 1) and line 9 | "Bearer on **both** protected REST operations" / "access token to **both** API calls"; "Appendix A (section 13)" | The contract has **three** protected REST operations (`listDemands`, `createDemand`, `getDemandDocument`; DEM-03 already requires the Bearer on the third); Appendix A is section 12 | Fix the wording (no behaviour change) | No | [T-090](../T-090.md) (new) |
+| D-02 | `klesia_webapp/docs/specs/SPECIFICATIONS.md` line 163 (AUTH-03); `klesia_webapp/CLAUDE.md` line 36 (rule 1) and line 9 | "Bearer on **both** protected REST operations" / "access token to **both** API calls"; "Appendix A (section 13)" | The contract has **three** protected REST operations (`listDemands`, `createDemand`, `getDemandDocument`; DEM-03 already requires the Bearer on the third); Appendix A is section 12 | Fix the wording (no behaviour change) | No | [T-091](../T-091.md) (new) |
 | D-03 | `klesia_webapp/docs/TASKS.md` | Referenced as the work tracker by `architecture-plan.md` §1.2/Appendix A and `klesia_webapp/CLAUDE.md` | Does not exist | Point references to `roadmap/` | No | [ARB-001](../ARB-001.md), [T-002](../T-002.md) |
 
 ### NOTE
 
 | Id | Observation | Mapped to |
 |---|---|---|
-| N-01 | API spec §4.1 allows an anonymous OpenAPI document in Development; the contract lists `/health` as the only anonymous route and calls itself the complete HTTP surface; the `check-contract` skill says code for a route not in the contract is always a finding. Tooling route vs governance rule to clarify. | [ARB-025](../ARB-025.md) (new, non-blocking), [T-010](../T-010.md), [T-074](../T-074.md) |
+| N-01 | API spec §4.1 allows an anonymous OpenAPI document in Development; the contract lists `/health` as the only anonymous route and calls itself the complete HTTP surface; the `check-contract` skill says code for a route not in the contract is always a finding. Tooling route vs governance rule to clarify. | [ARB-025](../ARB-025.md) (new, non-blocking), [T-010](../T-010.md), [T-075](../T-075.md) |
 | N-02 | Contract `ProblemDetails` examples show `traceId` in W3C `traceparent` format (`00-…-…-00`); the specifications only require `traceId` = `X-Correlation-Id`, with no format. T-014 may choose the format (string); no conflict. | [T-014](../T-014.md) |
-| N-03 | `Scripts/02_User.sql` seeds one named person (Entra `oid` and e-mail) in every environment (DEC-05, explicitly requested). | [ARB-019](../ARB-019.md), [T-084](../T-084.md) |
-| N-04 | No backend or frontend code exists (0 `.cs` files; no `klesia_webapp/src`); `klesia_webapp/package.json` `type-check` references a missing `tsconfig.app.json`. All five operations: *not implemented yet*. | Backend T-007…T-046, frontend [T-047](../T-047.md)… |
+| N-03 | `Scripts/02_User.sql` seeds one named person (Entra `oid` and e-mail) in every environment (DEC-05, explicitly requested). | [ARB-019](../ARB-019.md), [T-085](../T-085.md) |
+| N-04 | No backend or frontend code exists (0 `.cs` files; no `klesia_webapp/src`); `klesia_webapp/package.json` `type-check` references a missing `tsconfig.app.json`. All five operations: *not implemented yet*. | Backend T-007…T-036 and T-059…T-068, frontend [T-037](../T-037.md)… |
 | N-05 | Redocly recommended-ruleset warnings: four `servers` on `localhost`/`example.com` (placeholders, replaced once hosts are known); no `info.license`; `/health` has no `4XX` response (by design, API spec §5.3: `200`/`503` only). Only the server hosts need action; the two others contradict no source and are accepted as is. | Server hosts: [ARB-009](../ARB-009.md) (question 4) |
 | N-06 | The `py -3` launcher on this workstation points to a missing Python 3.14; the skill's Windows hint (`py -3`) fails here, `python` works. Environment only. | — |
 

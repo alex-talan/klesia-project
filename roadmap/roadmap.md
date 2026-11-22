@@ -112,14 +112,17 @@ Already in place — not re-planned as tasks:
 | C — Backend foundation | T-007 to T-023 | Configuration, domain, host, test harness, CI, middleware, authentication, allowlist, health |
 | D — Backend read path | T-024 to T-028 | Demand list and document streaming |
 | E — Backend real time | T-029 to T-031 | Notifier port and adapter, negotiate |
-| F — Backend creation | T-032 to T-036 | Validation, persistence, queue, use case, endpoint |
-| G — Backend extraction | T-037 to T-043 | Answer model, validation, persistence, use case, workers, Document Intelligence |
-| H — Backend hardening | T-044 to T-046 | Contract validation, security review, documentation |
-| I — Frontend | T-047 to T-073 | Scaffold, configuration, model, services, components, orchestration, security, gate |
-| J — Cross-application | T-074 to T-077 | Contract check, boundary review, environment-dependent tests |
-| K — Infrastructure and delivery | T-078 to T-089 | IaC, pipelines, dev deployment, production readiness |
+| F — Backend creation | T-032 to T-036 | Validation, persistence, queue, use case, endpoint (N-1; no extraction consumer yet) |
+| G — Frontend (demo path) | T-037 to T-057 | Scaffold, configuration, model, simulator, auth, services, components, orchestration |
+| **M1 — Demo milestone** | **T-058** | Local demo on dev Azure resources: list, open PDF, create with N-1 (section 8) |
+| H — Backend extraction | T-059 to T-065 | Answer model, validation, persistence, use case, workers, Document Intelligence |
+| I — Backend hardening | T-066 to T-068 | Contract validation, security review, documentation |
+| J — Frontend hardening | T-069 to T-074 | Security headers, security tests, simulator test, UI review, documentation, acceptance gate |
+| K — Cross-application | T-075 to T-078 | Contract check, boundary review, environment-dependent tests |
+| L — Infrastructure and delivery | T-079 to T-090 | IaC, pipelines, dev deployment, production readiness |
+| Follow-ups | T-091 | Tasks added after the roadmap creation |
 
-Phases C–H (backend) and I (frontend) can progress in parallel: the frontend is developed against the dev simulator (T-055), which implements the same contract.
+Phases C–F (backend) and G (frontend) can progress in parallel: the frontend is developed against the dev simulator (T-045), which implements the same contract. They meet at the milestone T-058.
 
 ```mermaid
 flowchart LR
@@ -127,10 +130,13 @@ flowchart LR
     B[B Database] --> C
     C --> D[D Read path] --> F[F Creation]
     C --> E[E Real time] --> F
-    F --> G[G Extraction] --> H[H Hardening]
-    I[I Frontend] --> J[J Cross-application]
-    H --> J
-    J --> K[K Infrastructure and delivery]
+    F --> M1((M1 demo T-058))
+    G[G Frontend demo path] --> M1
+    M1 --> H[H Extraction] --> I[I Backend hardening]
+    M1 --> J[J Frontend hardening]
+    I --> K[K Cross-application]
+    J --> K
+    K --> L[L Infrastructure and delivery]
 ```
 
 ---
@@ -175,60 +181,61 @@ flowchart LR
 | [T-034](T-034.md) | TODO | `IExtractionQueue` and bounded channel | Non-blocking in-process queue of demand ids (EXT-01) | `T-009` | P1 | api |
 | [T-035](T-035.md) | TODO | Demand creation use case | Upload → insert → commit → N-1 → enqueue, with cleanup and `503` | `T-021`, `T-026`, `T-030`, `T-032`, `T-033`, `T-034` | P1 | api |
 | [T-036](T-036.md) | TODO | `POST /api/v1/demands` | Multipart endpoint, request limits, status mapping (AT-23 to AT-30, AT-39, AT-48, AT-50, AT-56) | `T-016`, `T-025`, `T-035` | P1 | api |
-| [T-037](T-037.md) | TODO | Extraction answer model, port and parser | EXT-04 record, `IDocumentExtractor`, strict JSON parsing (AT-42) | `T-008` | P1 | api |
-| [T-038](T-038.md) | TODO | Extraction answer validator | EXT-05 rules incl. Luhn SIREN/SIRET and La Poste exception (AT-43) | `T-037` | P1 | api |
-| [T-039](T-039.md) | TODO | Extraction repository | Read for extraction, save + `ok` in one transaction, set `fail`, list stale | `T-003`, `T-005`, `T-020` | P1 | api |
-| [T-040](T-040.md) | TODO | Extraction use case (steps 2 and 3) | Guard, read blob, extract, validate, store or fail, N-2 | `T-026`, `T-029`, `T-038`, `T-039` | P1 | api |
-| [T-041](T-041.md) | TODO | Extraction worker | Hosted service with bounded concurrency and clean shutdown (EXT-01, EXT-08) | `T-034`, `T-040` | P1 | api |
-| [T-042](T-042.md) | TODO | Recovery sweep worker | Re-enqueue stale `pending` demands at startup and periodically (EXT-09) | `T-041` | P2 | api |
-| [T-043](T-043.md) | BLOCKED | Document Intelligence adapter | Real `IDocumentExtractor` with managed identity and timeout; wires extraction in `Program.cs` | `T-037`, `T-041`, `ARB-005`, `EXT-007` | P1 | api |
-| [T-044](T-044.md) | TODO | Contract validation in backend tests | Validate every integration-test response against the contract | `T-022`, `T-023`, `T-028`, `T-031`, `T-036` | P2 | api |
-| [T-045](T-045.md) | TODO | Backend security and log-redaction review | Security audit, log-capture tests, secret scan | `T-028`, `T-031`, `T-036`, `T-042` | P2 | api |
-| [T-046](T-046.md) | TODO | Backend documentation refresh | README, local development and deployment guides in sync with the code | `T-036`, `T-042` | P3 | api |
-| [T-047](T-047.md) | TODO | Scaffold the webapp | Vue 3 + Vite + strict TS, ESLint, Prettier, Vitest, npm scripts, `.nvmrc` | — | P1 | web |
-| [T-048](T-048.md) | TODO | Webapp CI workflow | GitHub Actions: type-check, lint, format check, tests, audit, build | `T-047` | P2 | web |
-| [T-049](T-049.md) | TODO | Design tokens and global styles | CSS variables of UI-04, focus/hover/disabled styles, base layout | `T-047` | P2 | web |
-| [T-050](T-050.md) | TODO | Build-time environment configuration | `environment.ts` validation of the six `VITE_*` values, `.env.example` | `T-047` | P1 | web |
-| [T-051](T-051.md) | TODO | Runtime configuration | `public/config/app-config.json` and `runtimeConfig.ts` (AC-20) | `T-047` | P1 | web |
-| [T-052](T-052.md) | TODO | Domain model `demand.ts` | Hand-written contract mirror and `parseUserDemands` (MODEL-01 to MODEL-03) | `T-047` | P1 | web |
-| [T-053](T-053.md) | TODO | GK number validation | `utils/gk.ts` normalisation and pattern (NEW-03, AC-10, AC-11) | `T-047` | P1 | web |
-| [T-054](T-054.md) | TODO | PDF file validation | `utils/pdf.ts` extension, MIME and size rules (NEW-04, AC-13) | `T-051` | P1 | web |
-| [T-055](T-055.md) | TODO | Dev simulator | `tools/dev-simulator`: REST, negotiate, SignalR JSON protocol, controls (SIM-01 to SIM-05) | `T-047` | P1 | web |
-| [T-056](T-056.md) | TODO | MSAL redirect bridge and SWA routing | `redirect.html` entry, `staticwebapp.config.json` fallback and `no-store` (AC-33) | `T-047` | P1 | web |
-| [T-057](T-057.md) | TODO | `authService.ts` | MSAL v5 singleton, redirect handling, access token, controlled recovery | `T-050`, `T-056` | P1 | web |
-| [T-058](T-058.md) | TODO | `demandService`: HTTP core and list | Authenticated request helper, error mapping, `listDemands` (DEM-01, AC-24, AC-25) | `T-052`, `T-057` | P1 | web |
-| [T-059](T-059.md) | TODO | `demandService`: create | `createDemand` multipart, any 2xx, never retried (NEW-06 to NEW-08) | `T-058` | P1 | web |
-| [T-060](T-060.md) | TODO | `demandService`: document | `fetchDemandDocument` PDF fetch, content-type check, one 401 recovery | `T-058` | P1 | web |
-| [T-061](T-061.md) | TODO | `realtimeService.ts` | Single `HubConnection`, token factory, retry policy, status events (RT-01 to RT-08) | `T-057` | P1 | web |
-| [T-062](T-062.md) | TODO | `useDemandList` coalesced reload | One shared reload, never two GETs in flight, preserved list on error (RT-04) | `T-058` | P1 | web |
-| [T-063](T-063.md) | TODO | App shell, auth gate and header | `App.vue`/`main.ts` startup, configuration errors, `AppHeader.vue` (AUTH-04, AUTH-05) | `T-049`, `T-050`, `T-057` | P1 | web |
-| [T-064](T-064.md) | TODO | `DemandList.vue` | Rows, French labels and colours, loading/empty/error/connection states (UI-07) | `T-049`, `T-062`, `T-063` | P1 | web |
-| [T-065](T-065.md) | TODO | BAE document opening | Link-styled button, blank tab, object URL, failure messages (DEM-03) | `T-060`, `T-064` | P1 | web |
-| [T-066](T-066.md) | TODO | `NewDemandModal.vue` | Accessible dialog, validation, submission states and errors (NEW-01 to NEW-09) | `T-049`, `T-051`, `T-053`, `T-054`, `T-059` | P1 | web |
-| [T-067](T-067.md) | TODO | App orchestration | Real-time wiring, initial GET timing, no GET on POST success (AC-52 to AC-54) | `T-061`, `T-062`, `T-064`, `T-066` | P1 | web |
-| [T-068](T-068.md) | TODO | SWA security headers and CSP | DEP-05 headers in `staticwebapp.config.json` and their tests (AC-48) | `T-056` | P2 | web |
-| [T-069](T-069.md) | TODO | Frontend security test suite | AC-43 to AC-47, AC-49 static and runtime checks | `T-065`, `T-067`, `T-068` | P2 | web |
-| [T-070](T-070.md) | TODO | Simulator integration test | AC-51 against the dev simulator | `T-055`, `T-067` | P2 | web |
-| [T-071](T-071.md) | TODO | UI review against the mockups | Visual check of `main.png`, `modal.png`, `states.png` (UI-03, UI-06, UI-07) | `T-065`, `T-067` | P2 | web |
-| [T-072](T-072.md) | TODO | Webapp documentation | README: setup, commands, Azure prerequisites, backend dependencies (DEP-03, DEP-04) | `T-067`, `T-068` | P3 | web |
-| [T-073](T-073.md) | TODO | Frontend acceptance gate | Full build gate AC-21, AC-42 and `/review-ac` on AC-01 to AC-56 | `T-069`, `T-070`, `T-071`, `T-072` | P1 | web |
-| [T-074](T-074.md) | TODO | Full contract check | `check-contract` on all steps with `--model` and `--actual` | `T-044`, `T-073` | P1 | root |
-| [T-075](T-075.md) | TODO | Boundary review | `integration-reviewer` on the complete cross-application change set | `T-074` | P1 | root |
-| [T-076](T-076.md) | BLOCKED | Run SQL constraint tests | Execute T-013 tests on a disposable published Azure SQL database | `T-013`, `EXT-004` | P2 | api |
-| [T-077](T-077.md) | BLOCKED | Live wire integration test | Level 3 of `integration-test`: real Entra, dev Azure resources, contract proxy | `T-075`, `EXT-001`, `EXT-002`, `EXT-003`, `EXT-005`, `EXT-006` | P2 | cross |
-| [T-078](T-078.md) | BLOCKED | Azure SignalR IaC alignment | Validate and align `infra/azure-signalr` with ARB-004 and the IaC ownership | `ARB-004`, `ARB-009`, `ARB-010` | P2 | infra |
-| [T-079](T-079.md) | BLOCKED | IaC: managed identity and role assignments | User-assigned identity and its roles on storage, DI, SignalR | `ARB-004`, `ARB-009`, `ARB-010` | P2 | infra |
-| [T-080](T-080.md) | BLOCKED | IaC: storage account | Private container, shared key disabled, settings of ARB-014 | `T-079`, `ARB-009`, `ARB-010`, `ARB-012`, `ARB-014` | P2 | infra |
-| [T-081](T-081.md) | BLOCKED | IaC: Azure SQL | Logical server, database, Entra admin, network per ARB-012/013 | `T-079`, `ARB-009`, `ARB-010`, `ARB-012`, `ARB-013` | P2 | infra |
-| [T-082](T-082.md) | BLOCKED | IaC: App Service | Plan and web app: Always On, HTTPS Only, TLS 1.2, Health check, identity, settings | `T-079`, `ARB-009`, `ARB-010`, `ARB-011`, `ARB-012` | P2 | infra |
-| [T-083](T-083.md) | BLOCKED | IaC: Static Web App | Static Web App resource per environment | `ARB-009`, `ARB-010`, `ARB-018` | P2 | infra |
-| [T-084](T-084.md) | BLOCKED | Per-environment allowlist seed | Make `02_User.sql` environment-aware according to ARB-019 | `T-006`, `ARB-019` | P2 | db |
-| [T-085](T-085.md) | BLOCKED | API delivery pipeline | Build, test, SqlPackage publish, deploy, health smoke test, rollback (HOST-11) | `T-011`, `T-081`, `T-082`, `T-084`, `ARB-011`, `ARB-017`, `EXT-008` | P2 | api |
-| [T-086](T-086.md) | BLOCKED | Webapp delivery pipeline | Per-environment build and deployment of `dist/` to Static Web Apps | `T-048`, `T-083`, `ARB-017`, `ARB-018` | P2 | web |
-| [T-087](T-087.md) | BLOCKED | Dev environment deployment and verification | Deploy both applications to dev and run AT-33, AT-35, AT-57 prerequisites | `T-043`, `T-075`, `T-078`, `T-080`, `T-085`, `T-086`, `EXT-001`, `EXT-007` | P2 | cross |
-| [T-088](T-088.md) | TODO | PDF viewer check under production headers | Manual AC-57 in Chrome, Edge and Firefox on the deployed dev SWA | `T-087` | P3 | web |
-| [T-089](T-089.md) | TODO | Production readiness and go-live | Every arbitrage settled, open items answered, production checklist executed | `T-076`, `T-077`, `T-087`, `T-088` | P3 | cross |
-| [T-090](T-090.md) | TODO | Fix wording drift in webapp documents | AUTH-03 and webapp `CLAUDE.md` say "both" protected operations (three exist); Appendix A section number | — | P3 | web |
+| [T-037](T-037.md) | TODO | Scaffold the webapp | Vue 3 + Vite + strict TS, ESLint, Prettier, Vitest, npm scripts, `.nvmrc` | — | P1 | web |
+| [T-038](T-038.md) | TODO | Webapp CI workflow | GitHub Actions: type-check, lint, format check, tests, audit, build | `T-037` | P2 | web |
+| [T-039](T-039.md) | TODO | Design tokens and global styles | CSS variables of UI-04, focus/hover/disabled styles, base layout | `T-037` | P2 | web |
+| [T-040](T-040.md) | TODO | Build-time environment configuration | `environment.ts` validation of the six `VITE_*` values, `.env.example` | `T-037` | P1 | web |
+| [T-041](T-041.md) | TODO | Runtime configuration | `public/config/app-config.json` and `runtimeConfig.ts` (AC-20) | `T-037` | P1 | web |
+| [T-042](T-042.md) | TODO | Domain model `demand.ts` | Hand-written contract mirror and `parseUserDemands` (MODEL-01 to MODEL-03) | `T-037` | P1 | web |
+| [T-043](T-043.md) | TODO | GK number validation | `utils/gk.ts` normalisation and pattern (NEW-03, AC-10, AC-11) | `T-037` | P1 | web |
+| [T-044](T-044.md) | TODO | PDF file validation | `utils/pdf.ts` extension, MIME and size rules (NEW-04, AC-13) | `T-041` | P1 | web |
+| [T-045](T-045.md) | TODO | Dev simulator | `tools/dev-simulator`: REST, negotiate, SignalR JSON protocol, controls (SIM-01 to SIM-05) | `T-037` | P1 | web |
+| [T-046](T-046.md) | TODO | MSAL redirect bridge and SWA routing | `redirect.html` entry, `staticwebapp.config.json` fallback and `no-store` (AC-33) | `T-037` | P1 | web |
+| [T-047](T-047.md) | TODO | `authService.ts` | MSAL v5 singleton, redirect handling, access token, controlled recovery | `T-040`, `T-046` | P1 | web |
+| [T-048](T-048.md) | TODO | `demandService`: HTTP core and list | Authenticated request helper, error mapping, `listDemands` (DEM-01, AC-24, AC-25) | `T-042`, `T-047` | P1 | web |
+| [T-049](T-049.md) | TODO | `demandService`: create | `createDemand` multipart, any 2xx, never retried (NEW-06 to NEW-08) | `T-048` | P1 | web |
+| [T-050](T-050.md) | TODO | `demandService`: document | `fetchDemandDocument` PDF fetch, content-type check, one 401 recovery | `T-048` | P1 | web |
+| [T-051](T-051.md) | TODO | `realtimeService.ts` | Single `HubConnection`, token factory, retry policy, status events (RT-01 to RT-08) | `T-047` | P1 | web |
+| [T-052](T-052.md) | TODO | `useDemandList` coalesced reload | One shared reload, never two GETs in flight, preserved list on error (RT-04) | `T-048` | P1 | web |
+| [T-053](T-053.md) | TODO | App shell, auth gate and header | `App.vue`/`main.ts` startup, configuration errors, `AppHeader.vue` (AUTH-04, AUTH-05) | `T-039`, `T-040`, `T-047` | P1 | web |
+| [T-054](T-054.md) | TODO | `DemandList.vue` | Rows, French labels and colours, loading/empty/error/connection states (UI-07) | `T-039`, `T-052`, `T-053` | P1 | web |
+| [T-055](T-055.md) | TODO | BAE document opening | Link-styled button, blank tab, object URL, failure messages (DEM-03) | `T-050`, `T-054` | P1 | web |
+| [T-056](T-056.md) | TODO | `NewDemandModal.vue` | Accessible dialog, validation, submission states and errors (NEW-01 to NEW-09) | `T-039`, `T-041`, `T-043`, `T-044`, `T-049` | P1 | web |
+| [T-057](T-057.md) | TODO | App orchestration | Real-time wiring, initial GET timing, no GET on POST success (AC-52 to AC-54) | `T-051`, `T-052`, `T-054`, `T-056` | P1 | web |
+| [T-058](T-058.md) | BLOCKED | **Milestone M1 — local demo** | Local API + SPA on dev Azure resources: list demands, open a PDF, create a demand (blob + `pending` row + N-1), no extraction | `T-006`, `T-022`, `T-028`, `T-031`, `T-036`, `T-055`, `T-057`, `EXT-001`, `EXT-003`, `EXT-005`, `EXT-006` | P1 | cross |
+| [T-059](T-059.md) | TODO | Extraction answer model, port and parser | EXT-04 record, `IDocumentExtractor`, strict JSON parsing (AT-42) | `T-008` | P1 | api |
+| [T-060](T-060.md) | TODO | Extraction answer validator | EXT-05 rules incl. Luhn SIREN/SIRET and La Poste exception (AT-43) | `T-059` | P1 | api |
+| [T-061](T-061.md) | TODO | Extraction repository | Read for extraction, save + `ok` in one transaction, set `fail`, list stale | `T-003`, `T-005`, `T-020` | P1 | api |
+| [T-062](T-062.md) | TODO | Extraction use case (steps 2 and 3) | Guard, read blob, extract, validate, store or fail, N-2 | `T-026`, `T-029`, `T-060`, `T-061` | P1 | api |
+| [T-063](T-063.md) | TODO | Extraction worker | Hosted service with bounded concurrency and clean shutdown (EXT-01, EXT-08) | `T-034`, `T-062` | P1 | api |
+| [T-064](T-064.md) | TODO | Recovery sweep worker | Re-enqueue stale `pending` demands at startup and periodically (EXT-09) | `T-063` | P2 | api |
+| [T-065](T-065.md) | BLOCKED | Document Intelligence adapter | Real `IDocumentExtractor` with managed identity and timeout; wires extraction and its configuration in `Program.cs` | `T-059`, `T-063`, `ARB-005`, `EXT-007` | P1 | api |
+| [T-066](T-066.md) | TODO | Contract validation in backend tests | Validate every integration-test response against the contract | `T-022`, `T-023`, `T-028`, `T-031`, `T-036` | P2 | api |
+| [T-067](T-067.md) | TODO | Backend security and log-redaction review | Security audit, log-capture tests, secret scan | `T-028`, `T-031`, `T-036`, `T-064` | P2 | api |
+| [T-068](T-068.md) | TODO | Backend documentation refresh | README, local development and deployment guides in sync with the code | `T-036`, `T-064` | P3 | api |
+| [T-069](T-069.md) | TODO | SWA security headers and CSP | DEP-05 headers in `staticwebapp.config.json` and their tests (AC-48) | `T-046` | P2 | web |
+| [T-070](T-070.md) | TODO | Frontend security test suite | AC-43 to AC-47, AC-49 static and runtime checks | `T-055`, `T-057`, `T-069` | P2 | web |
+| [T-071](T-071.md) | TODO | Simulator integration test | AC-51 against the dev simulator | `T-045`, `T-057` | P2 | web |
+| [T-072](T-072.md) | TODO | UI review against the mockups | Visual check of `main.png`, `modal.png`, `states.png` (UI-03, UI-06, UI-07) | `T-055`, `T-057` | P2 | web |
+| [T-073](T-073.md) | TODO | Webapp documentation | README: setup, commands, Azure prerequisites, backend dependencies (DEP-03, DEP-04) | `T-057`, `T-069` | P3 | web |
+| [T-074](T-074.md) | TODO | Frontend acceptance gate | Full build gate AC-21, AC-42 and `/review-ac` on AC-01 to AC-56 | `T-070`, `T-071`, `T-072`, `T-073` | P1 | web |
+| [T-075](T-075.md) | TODO | Full contract check | `check-contract` on all steps with `--model` and `--actual` | `T-066`, `T-074` | P1 | root |
+| [T-076](T-076.md) | TODO | Boundary review | `integration-reviewer` on the complete cross-application change set | `T-075` | P1 | root |
+| [T-077](T-077.md) | BLOCKED | Run SQL constraint tests | Execute T-013 tests on a disposable published Azure SQL database | `T-013`, `EXT-004` | P2 | api |
+| [T-078](T-078.md) | BLOCKED | Live wire integration test | Level 3 of `integration-test`: real Entra, dev Azure resources, contract proxy | `T-076`, `EXT-001`, `EXT-002`, `EXT-003`, `EXT-005`, `EXT-006` | P2 | cross |
+| [T-079](T-079.md) | BLOCKED | Azure SignalR IaC alignment | Validate and align `infra/azure-signalr` with ARB-004 and the IaC ownership | `ARB-004`, `ARB-009`, `ARB-010` | P2 | infra |
+| [T-080](T-080.md) | BLOCKED | IaC: managed identity and role assignments | User-assigned identity and its roles on storage, DI, SignalR | `ARB-004`, `ARB-009`, `ARB-010` | P2 | infra |
+| [T-081](T-081.md) | BLOCKED | IaC: storage account | Private container, shared key disabled, settings of ARB-014 | `T-080`, `ARB-009`, `ARB-010`, `ARB-012`, `ARB-014` | P2 | infra |
+| [T-082](T-082.md) | BLOCKED | IaC: Azure SQL | Logical server, database, Entra admin, network per ARB-012/013 | `T-080`, `ARB-009`, `ARB-010`, `ARB-012`, `ARB-013` | P2 | infra |
+| [T-083](T-083.md) | BLOCKED | IaC: App Service | Plan and web app: Always On, HTTPS Only, TLS 1.2, Health check, identity, settings | `T-080`, `ARB-009`, `ARB-010`, `ARB-011`, `ARB-012` | P2 | infra |
+| [T-084](T-084.md) | BLOCKED | IaC: Static Web App | Static Web App resource per environment | `ARB-009`, `ARB-010`, `ARB-018` | P2 | infra |
+| [T-085](T-085.md) | BLOCKED | Per-environment allowlist seed | Make `02_User.sql` environment-aware according to ARB-019 | `T-006`, `ARB-019` | P2 | db |
+| [T-086](T-086.md) | BLOCKED | API delivery pipeline | Build, test, SqlPackage publish, deploy, health smoke test, rollback (HOST-11) | `T-011`, `T-082`, `T-083`, `T-085`, `ARB-011`, `ARB-017`, `EXT-008` | P2 | api |
+| [T-087](T-087.md) | BLOCKED | Webapp delivery pipeline | Per-environment build and deployment of `dist/` to Static Web Apps | `T-038`, `T-084`, `ARB-017`, `ARB-018` | P2 | web |
+| [T-088](T-088.md) | BLOCKED | Dev environment deployment and verification | Deploy both applications to dev and run AT-33, AT-35, AT-57 prerequisites | `T-065`, `T-076`, `T-079`, `T-081`, `T-086`, `T-087`, `EXT-001`, `EXT-007` | P2 | cross |
+| [T-089](T-089.md) | TODO | PDF viewer check under production headers | Manual AC-57 in Chrome, Edge and Firefox on the deployed dev SWA | `T-088` | P3 | web |
+| [T-090](T-090.md) | TODO | Production readiness and go-live | Every arbitrage settled, open items answered, production checklist executed | `T-077`, `T-078`, `T-088`, `T-089` | P3 | cross |
+| [T-091](T-091.md) | TODO | Fix wording drift in webapp documents | AUTH-03 and webapp `CLAUDE.md` say "both" protected operations (three exist); Appendix A section number | — | P3 | web |
 
 ---
 
@@ -236,14 +243,14 @@ flowchart LR
 
 | Code | Subject | Provided by | Needed by | Status |
 |---|---|---|---|---|
-| `EXT-001` | Entra ID app registrations: tenant id, API app (v2 access tokens, scope `access_as_user`), SPA app (redirect URIs incl. `/redirect.html`), consent, optional claims `given_name`/`family_name` (OPEN-03, INT-01) | Client tenant administrator / DSI | T-077, T-087 | PENDING |
-| `EXT-002` | Entra test accounts: one allowlisted active user, one inactive user, one non-allowlisted user, with their `oid` | Client tenant administrator | T-077 | PENDING |
-| `EXT-003` | Dev Azure SQL database with the developer's Entra database user and firewall/private access (DEC-06, OPEN-07) | DSI / Azure administrator | T-077 | PENDING |
-| `EXT-004` | Disposable Azure SQL database for constraint tests (`KLESIA_TEST_SQL_CONNECTION`) | DSI / Azure administrator | T-076 | PENDING |
-| `EXT-005` | Dev storage account with a private container and *Storage Blob Data Contributor* for the developer | DSI / Azure administrator | T-077 | PENDING |
-| `EXT-006` | Dev Azure SignalR Service (Serverless) with CORS for `http://localhost:5173` and a role for the developer | DSI / Azure administrator | T-077 | PENDING |
-| `EXT-007` | Document Intelligence: trained custom BAE model, endpoint, model id, *Cognitive Services User* role, anonymised sample PDFs with their expected answers (OPEN-09) | Document Intelligence owners | T-043, T-087 | PENDING |
-| `EXT-008` | GitHub → Azure OpenID Connect federated credential(s), deployment principal(s) and SQL deployment principal (OPEN-08i) | DSI / Azure administrator | T-085 | PENDING |
+| `EXT-001` | Entra ID app registrations: tenant id, API app (v2 access tokens, scope `access_as_user`), SPA app (redirect URIs incl. `/redirect.html`), consent, optional claims `given_name`/`family_name` (OPEN-03, INT-01) | Client tenant administrator / DSI | T-058, T-078, T-088 | PENDING |
+| `EXT-002` | Entra test accounts: one allowlisted active user, one inactive user, one non-allowlisted user, with their `oid` | Client tenant administrator | T-078 | PENDING |
+| `EXT-003` | Dev Azure SQL database with the developer's Entra database user and firewall/private access (DEC-06, OPEN-07) | DSI / Azure administrator | T-058, T-078 | PENDING |
+| `EXT-004` | Disposable Azure SQL database for constraint tests (`KLESIA_TEST_SQL_CONNECTION`) | DSI / Azure administrator | T-077 | PENDING |
+| `EXT-005` | Dev storage account with a private container and *Storage Blob Data Contributor* for the developer | DSI / Azure administrator | T-058, T-078 | PENDING |
+| `EXT-006` | Dev Azure SignalR Service (Serverless) with CORS for `http://localhost:5173` and a role for the developer | DSI / Azure administrator | T-058, T-078 | PENDING |
+| `EXT-007` | Document Intelligence: trained custom BAE model, endpoint, model id, *Cognitive Services User* role, anonymised sample PDFs with their expected answers (OPEN-09) | Document Intelligence owners | T-065, T-088 | PENDING |
+| `EXT-008` | GitHub → Azure OpenID Connect federated credential(s), deployment principal(s) and SQL deployment principal (OPEN-08i) | DSI / Azure administrator | T-086 | PENDING |
 
 An `EXT` moves from `PENDING` to `PROVIDED` when the values or access are actually available to the team (never committed to the repository if sensitive; record *where* they are, not their value).
 
@@ -255,9 +262,17 @@ The decisions and open questions are listed in [`arbitrage.md`](arbitrage.md), e
 
 ---
 
-## 8. Ready at creation
+## 8. Milestones
 
-With the statuses above, the tasks that can start immediately are: **T-001, T-003, T-004, T-008, T-047** (then their dependents as they reach `DONE`). This list is informative; section 2 is the rule.
+A milestone is an ordinary task whose dependencies are exactly what an intermediate, demonstrable stage needs. It follows the readiness rule of section 2 like any task.
+
+| Milestone | Task | Demonstrable stage | Gating items still open at creation |
+|---|---|---|---|
+| **M1 — Demands without extraction** | [T-058](T-058.md) | Running locally (`dotnet run` + `npm run dev`) against real Entra ID and the dev Azure SQL, Blob Storage and SignalR resources: (1) the user sees the list of their demands and can open a demand's PDF; (2) the user creates a demand: the PDF is copied to Blob Storage, the row is inserted with status `pending`, the backend sends N-1 and the list reloads through SignalR. No extraction and no Document Intelligence call: new demands stay "En cours". | `ARB-004` (through T-030, T-031), `EXT-001`, `EXT-003`, `EXT-005`, `EXT-006` |
+
+What M1 deliberately does not include: the extraction (T-059 to T-065, so no N-2 and no `ok`/`fail` transition), the frontend and backend hardening (T-066 to T-074), any Azure deployment (T-079 to T-090). The specifications and the contract are unchanged: they describe the whole application without phasing; M1 exercises a subset of that behaviour.
+
+Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-037 (section 2 is the rule).
 
 ---
 
@@ -267,5 +282,6 @@ With the statuses above, the tasks that can start immediately are: **T-001, T-00
 |---|---|
 | 2026-11-21 | Roadmap created: 89 tasks, 24 arbitrages, 8 external dependencies. |
 | 2026-11-22 | Skills `/implement-task` and `/settle-arbitrage` added; `T-xxx.md` Status rows mirror section 5. |
-| 2026-11-22 | T-001 DONE (report `reports/T-001-baseline.md`); T-090 and ARB-025 created from its findings. |
+| 2026-11-22 | T-001 DONE (report `reports/T-001-baseline.md`); T-091 and ARB-025 created from its findings. |
 | 2026-11-22 | ARB-001 settled; T-002 unblocked (`BLOCKED` → `TODO`). |
+| 2026-11-22 | Reorganised for milestone M1 (section 8): frontend demo path renumbered T-047…T-067 → T-037…T-057; new milestone task T-058; extraction and backend hardening T-037…T-046 → T-059…T-068; T-068…T-090 → T-069…T-091. All references in `roadmap/` updated. Document Intelligence and extraction options are validated at startup only once the extraction is wired (T-009, T-065). |
