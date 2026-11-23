@@ -175,7 +175,7 @@ flowchart LR
 | [T-028](T-028.md) | DONE | `GET /api/v1/demands/{demand_id}/bae` | Stream the owner's PDF with the specified headers, `404`/`500`/`503` | `T-025`, `T-026`, `T-027` | P1 | api |
 | [T-029](T-029.md) | DONE | `INotifier` port | Application port "the demands of this `oid` changed" and its test double | `T-008` | P1 | api |
 | [T-030](T-030.md) | DONE | Azure SignalR notifier adapter | User-targeted `demandUpdated`, managed identity, short timeout, best effort | `T-009`, `T-029`, `ARB-004` | P1 | api |
-| [T-031](T-031.md) | TODO | `POST /api/v1/notifications/negotiate` | Allowlisted negotiation returning `{url, accessToken}` with `userId` = `oid` | `T-016`, `T-021`, `T-030`, `ARB-004` | P1 | api |
+| [T-031](T-031.md) | DONE | `POST /api/v1/notifications/negotiate` | Allowlisted negotiation returning `{url, accessToken}` with `userId` = `oid` | `T-016`, `T-021`, `T-030`, `ARB-004` | P1 | api |
 | [T-032](T-032.md) | TODO | Creation request validators | GK number, multipart parts, PDF magic bytes and size rules | `T-008`, `T-009` | P1 | api |
 | [T-033](T-033.md) | TODO | Demand repository: create pending demand | Dapper insert with status `pending` resolved by code, returns the id | `T-003`, `T-024` | P1 | api |
 | [T-034](T-034.md) | TODO | `IExtractionQueue` and bounded channel | Non-blocking in-process queue of demand ids (EXT-01) | `T-009` | P1 | api |
@@ -311,3 +311,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-23 | T-022 DONE: anonymous SQL-backed health probe and exact 200/503 JSON writer implemented and tested; full solution passes 113 tests with 6 SQL skips. |
 | 2026-11-23 | ARB-004 settled; T-030 moved from BLOCKED to TODO. T-031, T-058, T-079 and T-080 remain blocked by their other dependencies. |
 | 2026-11-23 | T-030 DONE: SignalR Management SDK adapter uses `DefaultAzureCredential`; focused notifier tests and full solution build/tests pass. T-031 moved from BLOCKED to TODO. |
+| 2026-11-23 | T-031 DONE: protected SignalR negotiation returns the contract redirect payload; authentication, allowlist, CORS and failure cases pass. T-058, T-066 and T-067 remain gated by other dependencies. |
