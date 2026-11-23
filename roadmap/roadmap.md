@@ -171,7 +171,7 @@ flowchart LR
 | [T-024](T-024.md) | DONE | Demand repository: list by owner | Dapper query of the owner's demands with status code, `Id DESC` | `T-020` | P1 | api |
 | [T-025](T-025.md) | DONE | `GET /api/v1/demands` | List use case, snake_case contract records, controller (AT-01 to AT-12, AT-55) | `T-016`, `T-021`, `T-024` | P1 | api |
 | [T-026](T-026.md) | DONE | `IBaeDocumentStore` and Blob adapter | Create-only upload, streamed read, best-effort delete, managed identity | `T-008`, `T-009` | P1 | api |
-| [T-027](T-027.md) | TODO | Demand repository: owned document lookup | One query by demand id **and** owner returning the internal blob URL | `T-024` | P1 | api |
+| [T-027](T-027.md) | DONE | Demand repository: owned document lookup | One query by demand id **and** owner returning the internal blob URL | `T-024` | P1 | api |
 | [T-028](T-028.md) | TODO | `GET /api/v1/demands/{demand_id}/bae` | Stream the owner's PDF with the specified headers, `404`/`500`/`503` | `T-025`, `T-026`, `T-027` | P1 | api |
 | [T-029](T-029.md) | TODO | `INotifier` port | Application port "the demands of this `oid` changed" and its test double | `T-008` | P1 | api |
 | [T-030](T-030.md) | BLOCKED | Azure SignalR notifier adapter | User-targeted `demandUpdated`, managed identity, short timeout, best effort | `T-009`, `T-029`, `ARB-004` | P1 | api |
