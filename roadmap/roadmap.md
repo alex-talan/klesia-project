@@ -173,7 +173,7 @@ flowchart LR
 | [T-026](T-026.md) | DONE | `IBaeDocumentStore` and Blob adapter | Create-only upload, streamed read, best-effort delete, managed identity | `T-008`, `T-009` | P1 | api |
 | [T-027](T-027.md) | DONE | Demand repository: owned document lookup | One query by demand id **and** owner returning the internal blob URL | `T-024` | P1 | api |
 | [T-028](T-028.md) | DONE | `GET /api/v1/demands/{demand_id}/bae` | Stream the owner's PDF with the specified headers, `404`/`500`/`503` | `T-025`, `T-026`, `T-027` | P1 | api |
-| [T-029](T-029.md) | TODO | `INotifier` port | Application port "the demands of this `oid` changed" and its test double | `T-008` | P1 | api |
+| [T-029](T-029.md) | DONE | `INotifier` port | Application port "the demands of this `oid` changed" and its test double | `T-008` | P1 | api |
 | [T-030](T-030.md) | BLOCKED | Azure SignalR notifier adapter | User-targeted `demandUpdated`, managed identity, short timeout, best effort | `T-009`, `T-029`, `ARB-004` | P1 | api |
 | [T-031](T-031.md) | BLOCKED | `POST /api/v1/notifications/negotiate` | Allowlisted negotiation returning `{url, accessToken}` with `userId` = `oid` | `T-016`, `T-021`, `T-030`, `ARB-004` | P1 | api |
 | [T-032](T-032.md) | TODO | Creation request validators | GK number, multipart parts, PDF magic bytes and size rules | `T-008`, `T-009` | P1 | api |
