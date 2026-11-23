@@ -54,6 +54,7 @@ This document lists every decision that must be settled and every open question 
 | [ARB-023](ARB-023.md) | Azure App Configuration and Key Vault adoption | Keep or remove the speculative `Azure:*` sections of `appsettings.json` | NO | `T-007` | OPEN | Tech lead |
 | [ARB-024](ARB-024.md) | Node.js version for builds | Node 26 LTS as specified vs the version installed locally and on CI/SWA build images | NO | `T-037`, `T-038`, `T-087` | OPEN | Tech lead |
 | [ARB-025](ARB-025.md) | Development-only OpenAPI document route vs the contract surface | Decide how the anonymous OpenAPI document served in Development relates to the contract, which declares `/health` as the only anonymous route | NO | `T-010`, `T-075` | OPEN | Tech lead |
+| [ARB-026](ARB-026.md) | Application-layer logging for demand creation | Decide how demand creation logs a best-effort blob cleanup failure without exposing the blob URL or adding an unapproved dependency | YES | `T-035`, `T-093` | SETTLED | Architect TALAN |
 
 ## 4. Change log
 
@@ -64,3 +65,5 @@ This document lists every decision that must be settled and every open question 
 | 2026-11-22 | ARB-001 settled: `roadmap/` is the single work tracker. |
 | 2026-11-23 | ARB-003 settled: approve `JsonSchema.Net` + `YamlDotNet` for backend contract tests; T-023 unblocked. |
 | 2026-11-23 | ARB-004 settled: Management SDK + `DefaultAzureCredential`, SignalR Service Owner, developer Entra identity locally; T-030 unblocked. |
+| 2026-11-23 | ARB-026 created during T-035: decide the Application-layer logging boundary for sanitized cleanup-failure logging. |
+| 2026-11-23 | ARB-026 settled: approve `Microsoft.Extensions.Logging.Abstractions` for Application; T-093 created as the prerequisite for T-035. |
