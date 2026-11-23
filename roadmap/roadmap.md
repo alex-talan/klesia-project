@@ -178,7 +178,7 @@ flowchart LR
 | [T-031](T-031.md) | DONE | `POST /api/v1/notifications/negotiate` | Allowlisted negotiation returning `{url, accessToken}` with `userId` = `oid` | `T-016`, `T-021`, `T-030`, `ARB-004` | P1 | api |
 | [T-032](T-032.md) | DONE | Creation request validators | GK number, multipart parts, PDF magic bytes and size rules | `T-008`, `T-009` | P1 | api |
 | [T-033](T-033.md) | DONE | Demand repository: create pending demand | Dapper insert with status `pending` resolved by code, returns the id | `T-003`, `T-024` | P1 | api |
-| [T-034](T-034.md) | TODO | `IExtractionQueue` and bounded channel | Non-blocking in-process queue of demand ids (EXT-01) | `T-009` | P1 | api |
+| [T-034](T-034.md) | DONE | `IExtractionQueue` and bounded channel | Non-blocking in-process queue of demand ids (EXT-01) | `T-009` | P1 | api |
 | [T-035](T-035.md) | TODO | Demand creation use case | Upload → insert → commit → N-1 → enqueue, with cleanup and `503` | `T-021`, `T-026`, `T-030`, `T-032`, `T-033`, `T-034` | P1 | api |
 | [T-036](T-036.md) | TODO | `POST /api/v1/demands` | Multipart endpoint, request limits, status mapping (AT-23 to AT-30, AT-39, AT-48, AT-50, AT-56) | `T-016`, `T-025`, `T-035` | P1 | api |
 | [T-037](T-037.md) | TODO | Scaffold the webapp | Vue 3 + Vite + strict TS, ESLint, Prettier, Vitest, npm scripts, `.nvmrc` | — | P1 | web |
@@ -314,3 +314,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-23 | T-031 DONE: protected SignalR negotiation returns the contract redirect payload; authentication, allowlist, CORS and failure cases pass. T-058, T-066 and T-067 remain gated by other dependencies. |
 | 2026-11-23 | T-032 DONE: Application validates GK number, configured byte limit, PDF MIME type and signature while preserving the stream; focused and full backend tests pass. |
 | 2026-11-23 | T-033 DONE: demand repository inserts with `pending` resolved by code and returns `OUTPUT INSERTED.Id`; opt-in SQL verification is skipped without `KLESIA_TEST_SQL_CONNECTION`. T-035 remains gated by T-034. |
+| 2026-11-23 | T-034 DONE: bounded in-process channel registered as the extraction queue; full-queue and concurrent-writer behavior tested. T-035 is now ready. |
