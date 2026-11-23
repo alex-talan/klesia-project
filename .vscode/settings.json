@@ -3,6 +3,7 @@
         "py": true,
         "dotnet build": true,
         "Test-Path": true,
-        "dotnet test": true
+        "dotnet test": true,
+        "git -C c:/repos/klesia/klesia_project": true
     }
 }

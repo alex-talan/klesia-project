@@ -31,7 +31,7 @@ This document lists every decision that must be settled and every open question 
 |---|---|---|---|---|---|---|
 | [ARB-001](ARB-001.md) | Work-tracking source of truth | Confirm that `roadmap/` replaces `klesia_webapp/docs/TASKS.md` (referenced but missing) | YES | `T-002` | SETTLED | Project owner |
 | [ARB-002](ARB-002.md) | Maximum PDF size and request limits | Real PDF limit aligned across SPA, API, App Service host, platform timeout and Document Intelligence (INT-05, OPEN-08f, OPEN-09d) | NO | `T-009`, `T-032`, `T-036`, `T-041`, `T-044`, `T-058`, `T-083`, `T-090` | OPEN | Client + DSI |
-| [ARB-003](ARB-003.md) | JSON-schema library for backend contract tests | Which package validates API responses against `contracts/openapi.yaml` in xUnit tests | YES | `T-023`, `T-066` | OPEN | Tech lead |
+| [ARB-003](ARB-003.md) | JSON-schema library for backend contract tests | Which package validates API responses against `contracts/openapi.yaml` in xUnit tests | YES | `T-023`, `T-066` | SETTLED | Tech lead |
 | [ARB-004](ARB-004.md) | Server-side Azure SignalR integration | Management SDK or raw REST, Azure role of the identity, access keys in dev or managed identity only | YES | `T-030`, `T-031`, `T-058`, `T-079`, `T-080` | OPEN | Tech lead + DSI |
 | [ARB-005](ARB-005.md) | Document Intelligence model and answer envelope | Model id, API version, SDK, and whether the answer is EXT-04 JSON as is or an `AnalyzeResult` to map (OPEN-09a/b) | YES | `T-059`, `T-065` | OPEN | Document Intelligence owners |
 | [ARB-006](ARB-006.md) | Required extracted fields | Which EXT-04 fields the model always returns (drives `NOT NULL` columns and EXT-05) (OPEN-09c) | NO | `T-004`, `T-060`, `T-065` | OPEN | Document Intelligence owners + client |
@@ -62,3 +62,4 @@ This document lists every decision that must be settled and every open question 
 | 2026-11-21 | 24 arbitrages created, all `OPEN`. |
 | 2026-11-22 | ARB-025 created by T-001 (baseline audit, finding N-01). |
 | 2026-11-22 | ARB-001 settled: `roadmap/` is the single work tracker. |
+| 2026-11-23 | ARB-003 settled: approve `JsonSchema.Net` + `YamlDotNet` for backend contract tests; T-023 unblocked. |

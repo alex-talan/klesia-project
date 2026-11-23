@@ -167,7 +167,7 @@ flowchart LR
 | [T-020](T-020.md) | DONE | SQL connection factory and user repository | Passwordless `SqlConnection` factory and `IUserRepository` (Dapper) | `T-008`, `T-009` | P1 | api |
 | [T-021](T-021.md) | DONE | Database allowlist gate | Resolve the active user from `oid`; identical `403` for unknown and inactive | `T-019`, `T-020` | P1 | api |
 | [T-022](T-022.md) | DONE | `GET /health` | Anonymous probe with SQL check, `200`/`503` (AT-22, AT-34) | `T-015`, `T-020` | P1 | api |
-| [T-023](T-023.md) | BLOCKED | Contract schema-validation helper | Test helper validating responses against `contracts/openapi.yaml` | `T-012`, `ARB-003` | P2 | api |
+| [T-023](T-023.md) | TODO | Contract schema-validation helper | Test helper validating responses against `contracts/openapi.yaml` | `T-012`, `ARB-003` | P2 | api |
 | [T-024](T-024.md) | TODO | Demand repository: list by owner | Dapper query of the owner's demands with status code, `Id DESC` | `T-020` | P1 | api |
 | [T-025](T-025.md) | TODO | `GET /api/v1/demands` | List use case, snake_case contract records, controller (AT-01 to AT-12, AT-55) | `T-016`, `T-021`, `T-024` | P1 | api |
 | [T-026](T-026.md) | TODO | `IBaeDocumentStore` and Blob adapter | Create-only upload, streamed read, best-effort delete, managed identity | `T-008`, `T-009` | P1 | api |
