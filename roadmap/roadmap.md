@@ -179,7 +179,7 @@ flowchart LR
 | [T-032](T-032.md) | DONE | Creation request validators | GK number, multipart parts, PDF magic bytes and size rules | `T-008`, `T-009` | P1 | api |
 | [T-033](T-033.md) | DONE | Demand repository: create pending demand | Dapper insert with status `pending` resolved by code, returns the id | `T-003`, `T-024` | P1 | api |
 | [T-034](T-034.md) | DONE | `IExtractionQueue` and bounded channel | Non-blocking in-process queue of demand ids (EXT-01) | `T-009` | P1 | api |
-| [T-035](T-035.md) | BLOCKED | Demand creation use case | Upload → insert → commit → N-1 → enqueue, with cleanup and `503` | `T-021`, `T-026`, `T-030`, `T-032`, `T-033`, `T-034`, `T-093` | P1 | api |
+| [T-035](T-035.md) | DONE | Demand creation use case | Upload → insert → commit → N-1 → enqueue, with cleanup and `503` | `T-021`, `T-026`, `T-030`, `T-032`, `T-033`, `T-034`, `T-093` | P1 | api |
 | [T-036](T-036.md) | TODO | `POST /api/v1/demands` | Multipart endpoint, request limits, status mapping (AT-23 to AT-30, AT-39, AT-48, AT-50, AT-56) | `T-016`, `T-025`, `T-035` | P1 | api |
 | [T-037](T-037.md) | TODO | Scaffold the webapp | Vue 3 + Vite + strict TS, ESLint, Prettier, Vitest, npm scripts, `.nvmrc` | — | P1 | web |
 | [T-038](T-038.md) | TODO | Webapp CI workflow | GitHub Actions: type-check, lint, format check, tests, audit, build | `T-037` | P2 | web |
@@ -237,7 +237,7 @@ flowchart LR
 | [T-090](T-090.md) | TODO | Production readiness and go-live | Every arbitrage settled, open items answered, production checklist executed | `T-077`, `T-078`, `T-088`, `T-089` | P3 | cross |
 | [T-091](T-091.md) | TODO | Fix wording drift in webapp documents | AUTH-03 and webapp `CLAUDE.md` say "both" protected operations (three exist); Appendix A section number | — | P3 | web |
 | [T-092](T-092.md) | DONE | Resolve vulnerable `System.Security.Cryptography.Pkcs` | Transitive 9.0.11 has a high (NU1903) and a moderate (NU1902) advisory on every API build | — | P2 | api |
-| [T-093](T-093.md) | BLOCKED | Application logging dependency for demand creation | Add the centrally pinned `Microsoft.Extensions.Logging.Abstractions` dependency to Application | `ARB-026` | P1 | api |
+| [T-093](T-093.md) | DONE | Application logging dependency for demand creation | Add the centrally pinned `Microsoft.Extensions.Logging.Abstractions` dependency to Application | `ARB-026` | P1 | api |
 
 ---
 
@@ -319,3 +319,5 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-23 | ARB-026 created during T-035; T-035 is BLOCKED pending a decision on Application-layer cleanup-failure logging. No implementation files changed. |
 | 2026-11-23 | ARB-026 settled for `Microsoft.Extensions.Logging.Abstractions`; T-093 created and added as a T-035 dependency. T-035 remains BLOCKED pending T-093. |
 | 2026-11-23 | T-093 package wiring passes focused checks but remains BLOCKED: full solution integration tests expose missing T-035 `IDemandCreationSettings` registration. |
+| 2026-11-23 | T-035 prerequisite adapter registered: Infrastructure maps validated `UploadOptions.MaxPdfSizeBytes` to `IDemandCreationSettings`; full solution build and tests pass (183 passed, 9 SQL skips). T-093 DONE; T-035 unblocked for its remaining use-case tests. |
+| 2026-11-23 | T-035 DONE: `CreateAsync` ordering and failure guarantees covered by 11 focused tests; full solution build passes and full suite passes (194 passed, 9 SQL skips). |
