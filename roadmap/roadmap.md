@@ -169,7 +169,7 @@ flowchart LR
 | [T-022](T-022.md) | DONE | `GET /health` | Anonymous probe with SQL check, `200`/`503` (AT-22, AT-34) | `T-015`, `T-020` | P1 | api |
 | [T-023](T-023.md) | DONE | Contract schema-validation helper | Test helper validating responses against `contracts/openapi.yaml` | `T-012`, `ARB-003` | P2 | api |
 | [T-024](T-024.md) | DONE | Demand repository: list by owner | Dapper query of the owner's demands with status code, `Id DESC` | `T-020` | P1 | api |
-| [T-025](T-025.md) | TODO | `GET /api/v1/demands` | List use case, snake_case contract records, controller (AT-01 to AT-12, AT-55) | `T-016`, `T-021`, `T-024` | P1 | api |
+| [T-025](T-025.md) | DONE | `GET /api/v1/demands` | List use case, snake_case contract records, controller (AT-01 to AT-12, AT-55) | `T-016`, `T-021`, `T-024` | P1 | api |
 | [T-026](T-026.md) | TODO | `IBaeDocumentStore` and Blob adapter | Create-only upload, streamed read, best-effort delete, managed identity | `T-008`, `T-009` | P1 | api |
 | [T-027](T-027.md) | TODO | Demand repository: owned document lookup | One query by demand id **and** owner returning the internal blob URL | `T-024` | P1 | api |
 | [T-028](T-028.md) | TODO | `GET /api/v1/demands/{demand_id}/bae` | Stream the owner's PDF with the specified headers, `404`/`500`/`503` | `T-025`, `T-026`, `T-027` | P1 | api |
