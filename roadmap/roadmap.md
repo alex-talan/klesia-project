@@ -191,7 +191,7 @@ flowchart LR
 | [T-044](T-044.md) | DONE | PDF file validation | `utils/pdf.ts` extension, MIME and size rules (NEW-04, AC-13) | `T-041` | P1 | web |
 | [T-045](T-045.md) | DONE | Dev simulator | `tools/dev-simulator`: REST, negotiate, SignalR JSON protocol, controls (SIM-01 to SIM-05) | `T-037` | P1 | web |
 | [T-046](T-046.md) | DONE | MSAL redirect bridge and SWA routing | `redirect.html` entry, `staticwebapp.config.json` fallback and `no-store` (AC-33) | `T-037` | P1 | web |
-| [T-047](T-047.md) | TODO | `authService.ts` | MSAL v5 singleton, redirect handling, access token, controlled recovery | `T-040`, `T-046` | P1 | web |
+| [T-047](T-047.md) | BLOCKED | `authService.ts` | MSAL v5 singleton, redirect handling, access token, controlled recovery | `T-040`, `T-046`, `T-094` | P1 | web |
 | [T-048](T-048.md) | TODO | `demandService`: HTTP core and list | Authenticated request helper, error mapping, `listDemands` (DEM-01, AC-24, AC-25) | `T-042`, `T-047`, `ARB-027` | P1 | web |
 | [T-049](T-049.md) | TODO | `demandService`: create | `createDemand` multipart, any 2xx, never retried (NEW-06 to NEW-08) | `T-048`, `ARB-027` | P1 | web |
 | [T-050](T-050.md) | TODO | `demandService`: document | `fetchDemandDocument` PDF fetch, content-type check, one 401 recovery | `T-048` | P1 | web |
@@ -238,6 +238,7 @@ flowchart LR
 | [T-091](T-091.md) | TODO | Fix wording drift in webapp documents | AUTH-03 and webapp `CLAUDE.md` say "both" protected operations (three exist); Appendix A section number | — | P3 | web |
 | [T-092](T-092.md) | DONE | Resolve vulnerable `System.Security.Cryptography.Pkcs` | Transitive 9.0.11 has a high (NU1903) and a moderate (NU1902) advisory on every API build | — | P2 | api |
 | [T-093](T-093.md) | DONE | Application logging dependency for demand creation | Add the centrally pinned `Microsoft.Extensions.Logging.Abstractions` dependency to Application | `ARB-026` | P1 | api |
+| [T-094](T-094.md) | TODO | Restore webapp Prettier gate | Diagnose and resolve repository-wide `format:check` drift without weakening the check | — | P2 | web |
 
 ---
 
@@ -322,3 +323,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-23 | T-035 prerequisite adapter registered: Infrastructure maps validated `UploadOptions.MaxPdfSizeBytes` to `IDemandCreationSettings`; full solution build and tests pass (183 passed, 9 SQL skips). T-093 DONE; T-035 unblocked for its remaining use-case tests. |
 | 2026-11-23 | T-035 DONE: `CreateAsync` ordering and failure guarantees covered by 11 focused tests; full solution build passes and full suite passes (194 passed, 9 SQL skips). |
 | 2026-11-24 | T-036 DONE: implemented the contracted POST route with bounded multipart parsing, configured request limits and 17 focused endpoint tests; contract check and full API build/test pass (211 passed, 9 SQL skips). Frontend create service and Azure platform limits remain outside this API task. |
+| 2026-11-24 | T-047 auth service and 11 mocked-MSAL tests implemented; type-check, lint, tests, build and audit pass. T-047 BLOCKED by the existing repo-wide Prettier failure; T-094 created to restore the format gate. |
