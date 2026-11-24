@@ -182,7 +182,7 @@ flowchart LR
 | [T-035](T-035.md) | DONE | Demand creation use case | Upload → insert → commit → N-1 → enqueue, with cleanup and `503` | `T-021`, `T-026`, `T-030`, `T-032`, `T-033`, `T-034`, `T-093` | P1 | api |
 | [T-036](T-036.md) | DONE | `POST /api/v1/demands` | Multipart endpoint, request limits, status mapping (AT-23 to AT-30, AT-39, AT-48, AT-50, AT-56) | `T-016`, `T-025`, `T-035` | P1 | api |
 | [T-037](T-037.md) | DONE | Scaffold the webapp | Vue 3 + Vite + strict TS, ESLint, Prettier, Vitest, npm scripts, `.nvmrc` | — | P1 | web |
-| [T-038](T-038.md) | TODO | Webapp CI workflow | GitHub Actions: type-check, lint, format check, tests, audit, build | `T-037` | P2 | web |
+| [T-038](T-038.md) | BLOCKED | Webapp CI workflow | GitHub Actions: type-check, lint, format check, tests, audit, build | `T-037` | P2 | web |
 | [T-039](T-039.md) | TODO | Design tokens and global styles | CSS variables of UI-04, focus/hover/disabled styles, base layout | `T-037` | P2 | web |
 | [T-040](T-040.md) | TODO | Build-time environment configuration | `environment.ts` validation of the six `VITE_*` values, `.env.example` | `T-037` | P1 | web |
 | [T-041](T-041.md) | TODO | Runtime configuration | `public/config/app-config.json` and `runtimeConfig.ts` (AC-20) | `T-037` | P1 | web |
