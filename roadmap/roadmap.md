@@ -187,20 +187,20 @@ flowchart LR
 | [T-040](T-040.md) | DONE | Build-time environment configuration | `environment.ts` validation of the six `VITE_*` values, `.env.example` | `T-037` | P1 | web |
 | [T-041](T-041.md) | DONE | Runtime configuration | `public/config/app-config.json` and `runtimeConfig.ts` (AC-20) | `T-037` | P1 | web |
 | [T-042](T-042.md) | DONE | Domain model `demand.ts` | Hand-written contract mirror and `parseUserDemands` (MODEL-01 to MODEL-03) | `T-037` | P1 | web |
-| [T-043](T-043.md) | TODO | GK number validation | `utils/gk.ts` normalisation and pattern (NEW-03, AC-10, AC-11) | `T-037` | P1 | web |
+| [T-043](T-043.md) | DONE | GK number validation | `utils/gk.ts` normalisation and pattern (NEW-03, AC-10, AC-11) | `T-037`, `ARB-027` | P1 | web |
 | [T-044](T-044.md) | TODO | PDF file validation | `utils/pdf.ts` extension, MIME and size rules (NEW-04, AC-13) | `T-041` | P1 | web |
 | [T-045](T-045.md) | TODO | Dev simulator | `tools/dev-simulator`: REST, negotiate, SignalR JSON protocol, controls (SIM-01 to SIM-05) | `T-037` | P1 | web |
 | [T-046](T-046.md) | TODO | MSAL redirect bridge and SWA routing | `redirect.html` entry, `staticwebapp.config.json` fallback and `no-store` (AC-33) | `T-037` | P1 | web |
 | [T-047](T-047.md) | TODO | `authService.ts` | MSAL v5 singleton, redirect handling, access token, controlled recovery | `T-040`, `T-046` | P1 | web |
-| [T-048](T-048.md) | TODO | `demandService`: HTTP core and list | Authenticated request helper, error mapping, `listDemands` (DEM-01, AC-24, AC-25) | `T-042`, `T-047` | P1 | web |
-| [T-049](T-049.md) | TODO | `demandService`: create | `createDemand` multipart, any 2xx, never retried (NEW-06 to NEW-08) | `T-048` | P1 | web |
+| [T-048](T-048.md) | TODO | `demandService`: HTTP core and list | Authenticated request helper, error mapping, `listDemands` (DEM-01, AC-24, AC-25) | `T-042`, `T-047`, `ARB-027` | P1 | web |
+| [T-049](T-049.md) | TODO | `demandService`: create | `createDemand` multipart, any 2xx, never retried (NEW-06 to NEW-08) | `T-048`, `ARB-027` | P1 | web |
 | [T-050](T-050.md) | TODO | `demandService`: document | `fetchDemandDocument` PDF fetch, content-type check, one 401 recovery | `T-048` | P1 | web |
 | [T-051](T-051.md) | TODO | `realtimeService.ts` | Single `HubConnection`, token factory, retry policy, status events (RT-01 to RT-08) | `T-047` | P1 | web |
 | [T-052](T-052.md) | TODO | `useDemandList` coalesced reload | One shared reload, never two GETs in flight, preserved list on error (RT-04) | `T-048` | P1 | web |
 | [T-053](T-053.md) | TODO | App shell, auth gate and header | `App.vue`/`main.ts` startup, configuration errors, `AppHeader.vue` (AUTH-04, AUTH-05) | `T-039`, `T-040`, `T-047` | P1 | web |
-| [T-054](T-054.md) | TODO | `DemandList.vue` | Rows, French labels and colours, loading/empty/error/connection states (UI-07) | `T-039`, `T-052`, `T-053` | P1 | web |
+| [T-054](T-054.md) | TODO | `DemandList.vue` | Rows, French labels and colours, loading/empty/error/connection states (UI-07) | `T-039`, `T-052`, `T-053`, `ARB-027` | P1 | web |
 | [T-055](T-055.md) | TODO | BAE document opening | Link-styled button, blank tab, object URL, failure messages (DEM-03) | `T-050`, `T-054` | P1 | web |
-| [T-056](T-056.md) | TODO | `NewDemandModal.vue` | Accessible dialog, validation, submission states and errors (NEW-01 to NEW-09) | `T-039`, `T-041`, `T-043`, `T-044`, `T-049` | P1 | web |
+| [T-056](T-056.md) | TODO | `NewDemandModal.vue` | Accessible dialog, validation, submission states and errors (NEW-01 to NEW-09) | `T-039`, `T-041`, `T-043`, `T-044`, `T-049`, `ARB-027` | P1 | web |
 | [T-057](T-057.md) | TODO | App orchestration | Real-time wiring, initial GET timing, no GET on POST success (AC-52 to AC-54) | `T-051`, `T-052`, `T-054`, `T-056` | P1 | web |
 | [T-058](T-058.md) | BLOCKED | **Milestone M1 — local demo** | Local API + SPA on dev Azure resources: list demands, open a PDF, create a demand (blob + `pending` row + N-1), no extraction | `T-006`, `T-022`, `T-028`, `T-031`, `T-036`, `T-055`, `T-057`, `EXT-001`, `EXT-003`, `EXT-005`, `EXT-006` | P1 | cross |
 | [T-059](T-059.md) | TODO | Extraction answer model, port and parser | EXT-04 record, `IDocumentExtractor`, strict JSON parsing (AT-42) | `T-008` | P1 | api |

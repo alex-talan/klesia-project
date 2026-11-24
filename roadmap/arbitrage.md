@@ -55,6 +55,7 @@ This document lists every decision that must be settled and every open question 
 | [ARB-024](ARB-024.md) | Node.js version for builds | Node 26 LTS as specified vs the version installed locally and on CI/SWA build images | NO | `T-037`, `T-038`, `T-087` | OPEN | Tech lead |
 | [ARB-025](ARB-025.md) | Development-only OpenAPI document route vs the contract surface | Decide how the anonymous OpenAPI document served in Development relates to the contract, which declares `/health` as the only anonymous route | NO | `T-010`, `T-075` | OPEN | Tech lead |
 | [ARB-026](ARB-026.md) | Application-layer logging for demand creation | Decide how demand creation logs a best-effort blob cleanup failure without exposing the blob URL or adding an unapproved dependency | YES | `T-035`, `T-093` | SETTLED | Architect TALAN |
+| [ARB-027](ARB-027.md) | GK number contract/specification drift | Resolve the conflict between GK-number requirements in the OpenAPI contract and roadmap tasks versus legacy SIREN validation requirements in the webapp specification | YES | `T-043`, `T-048`, `T-049`, `T-054`, `T-056` | SETTLED | Project owner + tech lead |
 
 ## 4. Change log
 
@@ -67,3 +68,5 @@ This document lists every decision that must be settled and every open question 
 | 2026-11-23 | ARB-004 settled: Management SDK + `DefaultAzureCredential`, SignalR Service Owner, developer Entra identity locally; T-030 unblocked. |
 | 2026-11-23 | ARB-026 created during T-035: decide the Application-layer logging boundary for sanitized cleanup-failure logging. |
 | 2026-11-23 | ARB-026 settled: approve `Microsoft.Extensions.Logging.Abstractions` for Application; T-093 created as the prerequisite for T-035. |
+| 2026-11-24 | ARB-027 created during T-043: resolve GK-number versus SIREN requirements drift in the frontend specification and dependent tasks. |
+| 2026-11-24 | ARB-027 settled: reaffirm GK/`gk_number`; current frontend specification and OpenAPI agree; no follow-up task required. |
