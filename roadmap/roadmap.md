@@ -180,7 +180,7 @@ flowchart LR
 | [T-033](T-033.md) | DONE | Demand repository: create pending demand | Dapper insert with status `pending` resolved by code, returns the id | `T-003`, `T-024` | P1 | api |
 | [T-034](T-034.md) | DONE | `IExtractionQueue` and bounded channel | Non-blocking in-process queue of demand ids (EXT-01) | `T-009` | P1 | api |
 | [T-035](T-035.md) | DONE | Demand creation use case | Upload → insert → commit → N-1 → enqueue, with cleanup and `503` | `T-021`, `T-026`, `T-030`, `T-032`, `T-033`, `T-034`, `T-093` | P1 | api |
-| [T-036](T-036.md) | TODO | `POST /api/v1/demands` | Multipart endpoint, request limits, status mapping (AT-23 to AT-30, AT-39, AT-48, AT-50, AT-56) | `T-016`, `T-025`, `T-035` | P1 | api |
+| [T-036](T-036.md) | DONE | `POST /api/v1/demands` | Multipart endpoint, request limits, status mapping (AT-23 to AT-30, AT-39, AT-48, AT-50, AT-56) | `T-016`, `T-025`, `T-035` | P1 | api |
 | [T-037](T-037.md) | TODO | Scaffold the webapp | Vue 3 + Vite + strict TS, ESLint, Prettier, Vitest, npm scripts, `.nvmrc` | — | P1 | web |
 | [T-038](T-038.md) | TODO | Webapp CI workflow | GitHub Actions: type-check, lint, format check, tests, audit, build | `T-037` | P2 | web |
 | [T-039](T-039.md) | TODO | Design tokens and global styles | CSS variables of UI-04, focus/hover/disabled styles, base layout | `T-037` | P2 | web |
@@ -321,3 +321,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-23 | T-093 package wiring passes focused checks but remains BLOCKED: full solution integration tests expose missing T-035 `IDemandCreationSettings` registration. |
 | 2026-11-23 | T-035 prerequisite adapter registered: Infrastructure maps validated `UploadOptions.MaxPdfSizeBytes` to `IDemandCreationSettings`; full solution build and tests pass (183 passed, 9 SQL skips). T-093 DONE; T-035 unblocked for its remaining use-case tests. |
 | 2026-11-23 | T-035 DONE: `CreateAsync` ordering and failure guarantees covered by 11 focused tests; full solution build passes and full suite passes (194 passed, 9 SQL skips). |
+| 2026-11-24 | T-036 DONE: implemented the contracted POST route with bounded multipart parsing, configured request limits and 17 focused endpoint tests; contract check and full API build/test pass (211 passed, 9 SQL skips). Frontend create service and Azure platform limits remain outside this API task. |

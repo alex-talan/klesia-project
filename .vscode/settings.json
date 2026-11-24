@@ -4,6 +4,11 @@
         "dotnet build": true,
         "Test-Path": true,
         "dotnet test": true,
-        "git -C c:/repos/klesia/klesia_project": true
+        "git -C c:/repos/klesia/klesia_project": true,
+        "/^Set-Location c:/repos/klesia/klesia_project; python \\.claude/skills/check-contract/scripts/validate_contract\\.py --skip-missing$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "npm.cmd": true
     }
 }
