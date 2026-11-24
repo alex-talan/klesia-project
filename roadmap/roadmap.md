@@ -185,7 +185,7 @@ flowchart LR
 | [T-038](T-038.md) | BLOCKED | Webapp CI workflow | GitHub Actions: type-check, lint, format check, tests, audit, build | `T-037` | P2 | web |
 | [T-039](T-039.md) | DONE | Design tokens and global styles | CSS variables of UI-04, focus/hover/disabled styles, base layout | `T-037` | P2 | web |
 | [T-040](T-040.md) | DONE | Build-time environment configuration | `environment.ts` validation of the six `VITE_*` values, `.env.example` | `T-037` | P1 | web |
-| [T-041](T-041.md) | TODO | Runtime configuration | `public/config/app-config.json` and `runtimeConfig.ts` (AC-20) | `T-037` | P1 | web |
+| [T-041](T-041.md) | DONE | Runtime configuration | `public/config/app-config.json` and `runtimeConfig.ts` (AC-20) | `T-037` | P1 | web |
 | [T-042](T-042.md) | TODO | Domain model `demand.ts` | Hand-written contract mirror and `parseUserDemands` (MODEL-01 to MODEL-03) | `T-037` | P1 | web |
 | [T-043](T-043.md) | TODO | GK number validation | `utils/gk.ts` normalisation and pattern (NEW-03, AC-10, AC-11) | `T-037` | P1 | web |
 | [T-044](T-044.md) | TODO | PDF file validation | `utils/pdf.ts` extension, MIME and size rules (NEW-04, AC-13) | `T-041` | P1 | web |
