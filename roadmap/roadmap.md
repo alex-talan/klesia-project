@@ -198,7 +198,7 @@ flowchart LR
 | [T-051](T-051.md) | DONE | `realtimeService.ts` | Single `HubConnection`, token factory, retry policy, status events (RT-01 to RT-08) | `T-047` | P1 | web |
 | [T-052](T-052.md) | DONE | `useDemandList` coalesced reload | One shared reload, never two GETs in flight, preserved list on error (RT-04) | `T-048` | P1 | web |
 | [T-053](T-053.md) | DONE | App shell, auth gate and header | `App.vue`/`main.ts` startup, configuration errors, `AppHeader.vue` (AUTH-04, AUTH-05) | `T-039`, `T-040`, `T-047` | P1 | web |
-| [T-054](T-054.md) | TODO | `DemandList.vue` | Rows, French labels and colours, loading/empty/error/connection states (UI-07) | `T-039`, `T-052`, `T-053`, `ARB-027` | P1 | web |
+| [T-054](T-054.md) | DONE | `DemandList.vue` | Rows, French labels and colours, loading/empty/error/connection states (UI-07) | `T-039`, `T-052`, `T-053`, `ARB-027` | P1 | web |
 | [T-055](T-055.md) | TODO | BAE document opening | Link-styled button, blank tab, object URL, failure messages (DEM-03) | `T-050`, `T-054` | P1 | web |
 | [T-056](T-056.md) | TODO | `NewDemandModal.vue` | Accessible dialog, validation, submission states and errors (NEW-01 to NEW-09) | `T-039`, `T-041`, `T-043`, `T-044`, `T-049`, `ARB-027` | P1 | web |
 | [T-057](T-057.md) | TODO | App orchestration | Real-time wiring, initial GET timing, no GET on POST success (AC-52 to AC-54) | `T-051`, `T-052`, `T-054`, `T-056` | P1 | web |
@@ -332,3 +332,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-25 | T-051 DONE: realtime service uses the official SignalR client with negotiation, safe token factory, required reconnect policy and mocked lifecycle tests. T-057 still awaits T-052, T-054 and T-056. |
 | 2026-11-25 | T-052 DONE: `useDemandList` coalesces reload triggers into one in-flight GET and at most one follow-up, preserves the last good list on errors, and has no polling/focus refresh. Focused tests (5), full webapp gates and production build pass. |
 | 2026-11-25 | T-053 DONE: app startup validates configuration, protects data before authentication, renders the authenticated shell and header, and provides focused App/AppHeader tests. Full webapp gates pass; live Entra round trip remains environment-dependent. T-054 is now ready. |
+| 2026-11-25 | T-054 DONE: `DemandList.vue` renders demand statuses, loading/empty/error/connection states, and retry behavior with exact French text and safe interpolation; App integration and 9 focused tests pass. Full webapp gates and build pass; final visual pixel review remains T-072. T-055 is now ready. |
