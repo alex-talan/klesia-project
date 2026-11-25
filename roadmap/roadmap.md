@@ -193,7 +193,7 @@ flowchart LR
 | [T-046](T-046.md) | DONE | MSAL redirect bridge and SWA routing | `redirect.html` entry, `staticwebapp.config.json` fallback and `no-store` (AC-33) | `T-037` | P1 | web |
 | [T-047](T-047.md) | DONE | `authService.ts` | MSAL v5 singleton, redirect handling, access token, controlled recovery | `T-040`, `T-046`, `T-094` | P1 | web |
 | [T-048](T-048.md) | DONE | `demandService`: HTTP core and list | Authenticated request helper, error mapping, `listDemands` (DEM-01, AC-24, AC-25) | `T-042`, `T-047`, `ARB-027` | P1 | web |
-| [T-049](T-049.md) | TODO | `demandService`: create | `createDemand` multipart, any 2xx, never retried (NEW-06 to NEW-08) | `T-048`, `ARB-027` | P1 | web |
+| [T-049](T-049.md) | DONE | `demandService`: create | `createDemand` multipart, any 2xx, never retried (NEW-06 to NEW-08) | `T-048`, `ARB-027` | P1 | web |
 | [T-050](T-050.md) | TODO | `demandService`: document | `fetchDemandDocument` PDF fetch, content-type check, one 401 recovery | `T-048` | P1 | web |
 | [T-051](T-051.md) | TODO | `realtimeService.ts` | Single `HubConnection`, token factory, retry policy, status events (RT-01 to RT-08) | `T-047` | P1 | web |
 | [T-052](T-052.md) | TODO | `useDemandList` coalesced reload | One shared reload, never two GETs in flight, preserved list on error (RT-04) | `T-048` | P1 | web |
@@ -327,3 +327,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-24 | T-094 DONE: identified Git `core.autocrlf=true` versus Prettier LF defaults, set Prettier `endOfLine: auto`, and restored the full format gate; T-047 is ready again. |
 | 2026-11-24 | T-047 DONE: MSAL auth service and 11 focused tests pass; full webapp gates are green. Live Entra round trip remains unverified without an authorized test registration. |
 | 2026-11-24 | T-048 DONE: authenticated demand-list service maps safe errors, validates responses and retries one GET after 401 recovery; focused tests and full webapp gates pass. |
+| 2026-11-25 | T-049 DONE: create-demand multipart uses only the contracted parts, accepts any 2xx without reading the body, and performs no POST retry; focused and full webapp gates pass. T-056 is now ready. |
