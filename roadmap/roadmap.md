@@ -196,7 +196,7 @@ flowchart LR
 | [T-049](T-049.md) | DONE | `demandService`: create | `createDemand` multipart, any 2xx, never retried (NEW-06 to NEW-08) | `T-048`, `ARB-027` | P1 | web |
 | [T-050](T-050.md) | DONE | `demandService`: document | `fetchDemandDocument` PDF fetch, content-type check, one 401 recovery | `T-048` | P1 | web |
 | [T-051](T-051.md) | DONE | `realtimeService.ts` | Single `HubConnection`, token factory, retry policy, status events (RT-01 to RT-08) | `T-047` | P1 | web |
-| [T-052](T-052.md) | TODO | `useDemandList` coalesced reload | One shared reload, never two GETs in flight, preserved list on error (RT-04) | `T-048` | P1 | web |
+| [T-052](T-052.md) | DONE | `useDemandList` coalesced reload | One shared reload, never two GETs in flight, preserved list on error (RT-04) | `T-048` | P1 | web |
 | [T-053](T-053.md) | TODO | App shell, auth gate and header | `App.vue`/`main.ts` startup, configuration errors, `AppHeader.vue` (AUTH-04, AUTH-05) | `T-039`, `T-040`, `T-047` | P1 | web |
 | [T-054](T-054.md) | TODO | `DemandList.vue` | Rows, French labels and colours, loading/empty/error/connection states (UI-07) | `T-039`, `T-052`, `T-053`, `ARB-027` | P1 | web |
 | [T-055](T-055.md) | TODO | BAE document opening | Link-styled button, blank tab, object URL, failure messages (DEM-03) | `T-050`, `T-054` | P1 | web |
@@ -330,3 +330,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-25 | T-049 DONE: create-demand multipart uses only the contracted parts, accepts any 2xx without reading the body, and performs no POST retry; focused and full webapp gates pass. T-056 is now ready. |
 | 2026-11-25 | T-050 DONE: BAE links are validated against the owning demand and fetched with the API token from the API origin only; PDF content type and one-shot 401 recovery are tested. T-055 remains gated by T-054. |
 | 2026-11-25 | T-051 DONE: realtime service uses the official SignalR client with negotiation, safe token factory, required reconnect policy and mocked lifecycle tests. T-057 still awaits T-052, T-054 and T-056. |
+| 2026-11-25 | T-052 DONE: `useDemandList` coalesces reload triggers into one in-flight GET and at most one follow-up, preserves the last good list on errors, and has no polling/focus refresh. Focused tests (5), full webapp gates and production build pass. |
