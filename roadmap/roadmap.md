@@ -202,7 +202,7 @@ flowchart LR
 | [T-055](T-055.md) | DONE | BAE document opening | Link-styled button, blank tab, object URL, failure messages (DEM-03) | `T-050`, `T-054` | P1 | web |
 | [T-056](T-056.md) | DONE | `NewDemandModal.vue` | Accessible dialog, validation, submission states and errors (NEW-01 to NEW-09) | `T-039`, `T-041`, `T-043`, `T-044`, `T-049`, `ARB-027` | P1 | web |
 | [T-057](T-057.md) | DONE | App orchestration | Real-time wiring, initial GET timing, no GET on POST success (AC-52 to AC-54) | `T-051`, `T-052`, `T-054`, `T-056` | P1 | web |
-| [T-058](T-058.md) | BLOCKED | **Milestone M1 — local demo** | Local API + SPA on dev Azure resources: list demands, open a PDF, create a demand (blob + `pending` row + N-1), no extraction | `T-006`, `T-022`, `T-028`, `T-031`, `T-036`, `T-055`, `T-057`, `EXT-001`, `EXT-003`, `EXT-005`, `EXT-006` | P1 | cross |
+| [T-058](T-058.md) | TODO | **Milestone M1 — local demo** | Local API + SPA on dev Azure resources: list demands, open a PDF, create a demand (blob + `pending` row + N-1), no extraction | `T-006`, `T-022`, `T-028`, `T-031`, `T-036`, `T-055`, `T-057`, `EXT-001`, `EXT-003`, `EXT-005`, `EXT-006` | P1 | cross |
 | [T-059](T-059.md) | TODO | Extraction answer model, port and parser | EXT-04 record, `IDocumentExtractor`, strict JSON parsing (AT-42) | `T-008` | P1 | api |
 | [T-060](T-060.md) | TODO | Extraction answer validator | EXT-05 rules incl. Luhn SIREN/SIRET and La Poste exception (AT-43) | `T-059` | P1 | api |
 | [T-061](T-061.md) | TODO | Extraction repository | Read for extraction, save + `ok` in one transaction, set `fail`, list stale | `T-003`, `T-005`, `T-020` | P1 | api |
@@ -251,7 +251,7 @@ flowchart LR
 | `EXT-003` | Dev Azure SQL database with the developer's Entra database user and firewall/private access (DEC-06, OPEN-07) | DSI / Azure administrator | T-058, T-078 | PROVIDED |
 | `EXT-004` | Disposable Azure SQL database for constraint tests (`KLESIA_TEST_SQL_CONNECTION`) | DSI / Azure administrator | T-077 | PENDING |
 | `EXT-005` | Dev storage account with a private container and *Storage Blob Data Contributor* for the developer | DSI / Azure administrator | T-058, T-078 | PROVIDED |
-| `EXT-006` | Dev Azure SignalR Service (Serverless) with CORS for `http://localhost:5173` and a role for the developer | DSI / Azure administrator | T-058, T-078 | PENDING |
+| `EXT-006` | Dev Azure SignalR Service (Serverless) with CORS for `http://localhost:5173` and a role for the developer | DSI / Azure administrator | T-058, T-078 | PROVIDED |
 | `EXT-007` | Document Intelligence: trained custom BAE model, endpoint, model id, *Cognitive Services User* role, anonymised sample PDFs with their expected answers (OPEN-09) | Document Intelligence owners | T-065, T-088 | PENDING |
 | `EXT-008` | GitHub → Azure OpenID Connect federated credential(s), deployment principal(s) and SQL deployment principal (OPEN-08i) | DSI / Azure administrator | T-086 | PENDING |
 
@@ -339,3 +339,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-26 | EXT-001 PROVIDED: Entra tenant, API/SPA app registrations, v2 delegated `access_as_user` scope and local redirect/consent configuration were confirmed. Non-secret configuration values are stored in git-ignored `klesia_webapp/.env.local`; no identifiers or secrets were added to the roadmap. T-058, T-078 and T-088 remain gated by their other dependencies. |
 | 2026-11-26 | EXT-003 PROVIDED: the dev Azure SQL database, Entra developer principal, firewall access and database permissions passed verification. Passwordless connection details are stored in git-ignored `klesia_api/src/WebApi/appsettings.Local.json`; no connection details or identifiers were added to the roadmap. T-058 and T-078 remain gated by their other dependencies. |
 | 2026-11-26 | EXT-005 PROVIDED: the dev storage account and private container passed verification, including Blob Data Contributor access for the developer and shared-key restrictions. Storage settings are stored in git-ignored `klesia_api/src/WebApi/appsettings.Local.json`; no account names, container names or identifiers were added to the roadmap. T-058 and T-078 remain gated by their other dependencies. |
+| 2026-11-26 | EXT-006 PROVIDED: the dev Azure SignalR resource is Serverless, CORS is restricted to the local SPA origin, local authentication is disabled and SignalR Service Owner is assigned to the developer. T-058 is now ready for implementation; T-078 remains blocked by EXT-002. |
