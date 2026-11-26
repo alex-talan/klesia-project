@@ -246,7 +246,7 @@ flowchart LR
 
 | Code | Subject | Provided by | Needed by | Status |
 |---|---|---|---|---|
-| `EXT-001` | Entra ID app registrations: tenant id, API app (v2 access tokens, scope `access_as_user`), SPA app (redirect URIs incl. `/redirect.html`), consent, optional claims `given_name`/`family_name` (OPEN-03, INT-01) | Client tenant administrator / DSI | T-058, T-078, T-088 | PENDING |
+| `EXT-001` | Entra ID app registrations: tenant id, API app (v2 access tokens, scope `access_as_user`), SPA app (redirect URIs incl. `/redirect.html`), consent, optional claims `given_name`/`family_name` (OPEN-03, INT-01) | Client tenant administrator / DSI | T-058, T-078, T-088 | PROVIDED |
 | `EXT-002` | Entra test accounts: one allowlisted active user, one inactive user, one non-allowlisted user, with their `oid` | Client tenant administrator | T-078 | PENDING |
 | `EXT-003` | Dev Azure SQL database with the developer's Entra database user and firewall/private access (DEC-06, OPEN-07) | DSI / Azure administrator | T-058, T-078 | PENDING |
 | `EXT-004` | Disposable Azure SQL database for constraint tests (`KLESIA_TEST_SQL_CONNECTION`) | DSI / Azure administrator | T-077 | PENDING |
@@ -336,3 +336,4 @@ Ready at creation of the roadmap (informative): T-001, T-003, T-004, T-008, T-03
 | 2026-11-25 | T-055 DONE: GK controls open validated BAE PDFs through a synchronous blank tab, authenticated service fetch, object URL, and bounded revoke; invalid links stay plain text and failures close the tab with French messages. 15 focused tests, full webapp gates and build pass. Live PDF/CSP validation remains T-089/ARB-021. |
 | 2026-11-25 | T-056 DONE: accessible GK/PDF demand modal validates locally, posts once through `createDemand`, preserves drafts on failure, and closes/resets on success without list mutation or reload. 10 modal tests, 13 modal/App integration tests, full 205-test suite and build pass. T-057 is now ready. |
 | 2026-11-25 | T-057 DONE: authenticated App orchestration starts/stops realtime, reloads initially and after notifications/reconnection, shows connection state, and closes the modal on POST success without a list reload. 7 focused App tests, full 209-test suite and all webapp gates pass; live SignalR/Entra integration remains environment-dependent. T-058 remains blocked by external Azure prerequisites. |
+| 2026-11-26 | EXT-001 PROVIDED: Entra tenant, API/SPA app registrations, v2 delegated `access_as_user` scope and local redirect/consent configuration were confirmed. Non-secret configuration values are stored in git-ignored `klesia_webapp/.env.local`; no identifiers or secrets were added to the roadmap. T-058, T-078 and T-088 remain gated by their other dependencies. |
